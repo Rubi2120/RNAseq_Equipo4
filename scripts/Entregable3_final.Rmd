@@ -133,10 +133,10 @@ knitr::include_graphics("../figures/fastqc_adapter_content_plot.png")
 
 Los datos crudos presentan una **calidad general óptima**:
 
-- Puntaje Phred > 30 en prácticamente todas las posiciones ✅
-- Contenido de GC apropiado para tejido hepático murino ✅
-- Niveles de duplicación esperados para RNA-seq ✅
-- **Se detectaron adaptadores TruSeq3-PE** que deben eliminarse antes del alineamiento ⚠️
+- Puntaje Phred > 30 en prácticamente todas las posiciones 
+- Contenido de GC apropiado para tejido hepático murino 
+- Niveles de duplicación esperados para RNA-seq 
+- **Se detectaron adaptadores TruSeq3-PE** que deben eliminarse antes del alineamiento 
 
 **¿Son viables para continuar con el análisis?** Sí. Los datos son de buena calidad y viables para continuar, con la condición de eliminar los adaptadores y aplicar trimming de calidad antes del alineamiento.
 

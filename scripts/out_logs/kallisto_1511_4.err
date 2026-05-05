@@ -1,0 +1,15 @@
+
+[quant] fragment length distribution will be estimated from the data
+[index] k-mer length: 31
+[index] number of targets: 142,552
+[index] number of k-mers: 120,672,054
+[index] number of equivalence classes: 512,483
+[quant] running in paired-end mode
+[quant] will process pair 1: /mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/data/processed/tratamiento/SRR33445261/SRR33445261_1_paired.fastq.gz
+                             /mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/data/processed/tratamiento/SRR33445261/SRR33445261_2_paired.fastq.gz
+[quant] finding pseudoalignments for the reads ... done
+[quant] processed 30,669,829 reads, 29,200,606 reads pseudoaligned
+[quant] estimated average fragment length: 201.748
+[   em] quantifying the abundances ... done
+[   em] the Expectation-Maximization algorithm ran for 1,415 rounds
+

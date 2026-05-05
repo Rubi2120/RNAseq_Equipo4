@@ -1,0 +1,47 @@
+slurmstepd: error: *** JOB 1337 ON node02 CANCELLED AT 2026-04-20T22:35:54 ***
+2026-04-21T04:40:20 fasterq-dump.3.1.1 err: make_buffered_for_read().KDirectoryOpenFileRead( '/mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/fasterq.tmp.node03.4140405/SRR33445251.node03.4140405.0003.2' ) -> RC(rcFS,rcDirectory,rcOpening,rcPath,rcNotFound)
+2026-04-21T04:40:21 fasterq-dump.3.1.1 err: make_buffered_for_read().KDirectoryOpenFileRead( '/mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/fasterq.tmp.node03.4140405/SRR33445251.node03.4140405.0003.1' ) -> RC(rcFS,rcDirectory,rcOpening,rcPath,rcNotFound)
+spots read      : 45,090,950
+reads read      : 90,181,900
+
+=============================================================
+An error occurred during processing.
+A report was generated into the file '/home/rmartinez/ncbi_error_report.txt'.
+If the problem persists, you may consider sending the file
+to 'sra-tools@ncbi.nlm.nih.gov' for assistance.
+=============================================================
+
+fasterq-dump quit with error code 3
+spots read      : 45,264,999
+reads read      : 90,529,998
+reads written   : 90,529,998
+spots read      : 43,357,474
+reads read      : 86,714,948
+reads written   : 86,714,948
+spots read      : 48,399,669
+reads read      : 96,799,338
+reads written   : 96,799,338
+spots read      : 54,267,023
+reads read      : 108,534,046
+reads written   : 108,534,046
+spots read      : 47,652,320
+reads read      : 95,304,640
+reads written   : 95,304,640
+spots read      : 52,432,659
+reads read      : 104,865,318
+reads written   : 104,865,318
+spots read      : 56,451,414
+reads read      : 112,902,828
+reads written   : 112,902,828
+spots read      : 65,963,665
+reads read      : 131,927,330
+reads written   : 131,927,330
+spots read      : 50,327,443
+reads read      : 100,654,886
+reads written   : 100,654,886
+spots read      : 50,277,394
+reads read      : 100,554,788
+reads written   : 100,554,788
+spots read      : 51,227,777
+reads read      : 102,455,554
+reads written   : 102,455,554

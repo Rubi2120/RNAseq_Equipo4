@@ -82,7 +82,7 @@ Se analizó la calidad de las secuencias en los datos crudos mediante **FastQC**
 Esta gráfica muestra el número total de lecturas por muestra, diferenciando entre lecturas únicas y duplicadas.
 
 ```{r fig-counts, echo=FALSE, fig.cap="Figura 1. Conteo de secuencias por muestra.", out.width="90%"}
-knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_sequence_counts_plot.png")
+knitr::include_graphics("../figures/fastqc_sequence_counts_plot.png")
 ```
 
 ### 2.2 Calidad de las lecturas por posición de base
@@ -90,11 +90,11 @@ knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_sequen
 El puntaje Phred indica la probabilidad de error en cada base. Un valor Phred > 30 significa menos del 0.1% de probabilidad de error. En la siguiente gráfica se puede observar que todas las muestras presentan una calidad óptima a lo largo de toda la longitud del read.
 
 ```{r fig-quality, echo=FALSE, fig.cap="Figura 2. Calidad de las secuencias por posición de base.", out.width="90%"}
-knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_per_base_sequence_quality_plot.png")
+knitr::include_graphics("../figures/fastqc_per_base_sequence_quality_plot.png")
 ```
 
 ```{r fig-quality-scores, echo=FALSE, fig.cap="Figura 3. Distribución de puntajes de calidad por secuencia.", out.width="90%"}
-knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_per_sequence_quality_scores_plot.png")
+knitr::include_graphics("../figures/fastqc_per_sequence_quality_scores_plot.png")
 ```
 
 ### 2.3 Contenido de GC
@@ -102,7 +102,7 @@ knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_per_se
 El contenido de GC esperado para tejido hepático de ratón es aproximadamente 50%. Variaciones en esta distribución pueden indicar contaminación o sesgo de amplificación.
 
 ```{r fig-gc, echo=FALSE, fig.cap="Figura 4. Distribución del contenido de GC por secuencia.", out.width="90%"}
-knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_per_sequence_gc_content_plot.png")
+knitr::include_graphics("../figures/fastqc_per_sequence_gc_content_plot.png")
 ```
 
 ### 2.4 Contenido de bases por posición
@@ -110,7 +110,7 @@ knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_per_se
 Esta gráfica muestra el porcentaje de cada base (A, T, C, G) en cada posición del read. En datos de RNA-seq con selección PolyA es normal ver un sesgo al inicio de las lecturas.
 
 ```{r fig-base-content, echo=FALSE, fig.cap="Figura 5. Contenido de bases por posición.", out.width="90%"}
-knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_per_base_sequence_content_plot.png")
+knitr::include_graphics("../figures/fastqc_per_base_sequence_content_plot.png")
 ```
 
 ### 2.5 Niveles de duplicación
@@ -118,7 +118,7 @@ knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_per_ba
 Las secuencias duplicadas son comunes en RNA-seq debido a la alta expresión de ciertos genes. Un nivel moderado de duplicación es esperado y no necesariamente indica un problema.
 
 ```{r fig-dup, echo=FALSE, fig.cap="Figura 6. Niveles de duplicación de secuencias.", out.width="90%"}
-knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_sequence_duplication_levels_plot.png")
+knitr::include_graphics("../figures/fastqc_sequence_duplication_levels_plot.png")
 ```
 
 ### 2.6 Contenido de adaptadores
@@ -126,7 +126,7 @@ knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_sequen
 Los adaptadores son secuencias añadidas durante la preparación de la librería que deben eliminarse antes del alineamiento. Se detectó la presencia de adaptadores **TruSeq3-PE** de Illumina en las muestras.
 
 ```{r fig-adapt, echo=FALSE, fig.cap="Figura 7. Contenido de adaptadores en los datos crudos.", out.width="90%"}
-knitr::include_graphics("/home/leonardoanaya/Desktop/multiqc_plots/fastqc_adapter_content_plot.png")
+knitr::include_graphics("../figures/fastqc_adapter_content_plot.png")
 ```
 
 ### 2.7 Conclusión sobre los datos crudos

@@ -81,7 +81,7 @@ Se analizó la calidad de las secuencias en los datos crudos mediante **FastQC**
 
 Esta gráfica muestra el número total de lecturas por muestra, diferenciando entre lecturas únicas y duplicadas.
 
-```{r fig-counts, echo=FALSE, fig.cap="Figura 1. Conteo de secuencias por muestra.", out.width="90%"}
+```{r fig-counts, eval=FALSE, echo=FALSE, fig.cap="Figura 1. Conteo de secuencias por muestra.", out.width="90%"}
 knitr::include_graphics("../figures/fastqc_sequence_counts_plot.png")
 ```
 
@@ -101,7 +101,7 @@ knitr::include_graphics("../figures/fastqc_per_sequence_quality_scores_plot.png"
 
 El contenido de GC esperado para tejido hepático de ratón es aproximadamente 50%. Variaciones en esta distribución pueden indicar contaminación o sesgo de amplificación.
 
-```{r fig-gc, echo=FALSE, fig.cap="Figura 4. Distribución del contenido de GC por secuencia.", out.width="90%"}
+```{r fig-gc, eval=FALSE, echo=FALSE, fig.cap="Figura 4. Distribución del contenido de GC por secuencia.", out.width="90%"}
 knitr::include_graphics("../figures/fastqc_per_sequence_gc_content_plot.png")
 ```
 
@@ -109,7 +109,7 @@ knitr::include_graphics("../figures/fastqc_per_sequence_gc_content_plot.png")
 
 Esta gráfica muestra el porcentaje de cada base (A, T, C, G) en cada posición del read. En datos de RNA-seq con selección PolyA es normal ver un sesgo al inicio de las lecturas.
 
-```{r fig-base-content, echo=FALSE, fig.cap="Figura 5. Contenido de bases por posición.", out.width="90%"}
+```{r fig-base-content, eval=FALSE, echo=FALSE, fig.cap="Figura 5. Contenido de bases por posición.", out.width="90%"}
 knitr::include_graphics("../figures/fastqc_per_base_sequence_content_plot.png")
 ```
 
@@ -125,7 +125,7 @@ knitr::include_graphics("../figures/fastqc_sequence_duplication_levels_plot.png"
 
 Los adaptadores son secuencias añadidas durante la preparación de la librería que deben eliminarse antes del alineamiento. Se detectó la presencia de adaptadores **TruSeq3-PE** de Illumina en las muestras.
 
-```{r fig-adapt, echo=FALSE, fig.cap="Figura 7. Contenido de adaptadores en los datos crudos.", out.width="90%"}
+```{r fig-adapt, eval=FALSE, echo=FALSE, fig.cap="Figura 7. Contenido de adaptadores en los datos crudos.", out.width="90%"}
 knitr::include_graphics("../figures/fastqc_adapter_content_plot.png")
 ```
 
@@ -326,7 +326,7 @@ library(rhdf5)
 
 # Definir la ruta donde están los resultados de Kallisto
 # Cada muestra tiene su propia carpeta con abundance.h5
-ruta <- "/mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/results/kallisto"
+ruta <- "../results_final/kallisto"
 
 # Listar todos los archivos .h5 dentro de las subcarpetas
 # list.files() busca recursivamente en todas las subcarpetas
@@ -346,7 +346,7 @@ print(archivos_h5)
 ```{r cargar-metadata, echo=TRUE}
 # Cargar los metadatos
 # metadata.csv contiene: sample, genotype, tissue
-metadata <- read.csv("/mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/metadata.csv")
+metadata <- read.csv("../metadata.csv")
 
 # Convertir genotype a factor con WT como referencia
 # WT es el nivel de referencia para que el fold change sea Dp16/WT
@@ -391,7 +391,7 @@ STAR con `--quantMode GeneCounts` cuenta las lecturas por gen directamente, por 
 
 ```{r importar-star, echo=TRUE}
 # Directorio con resultados de STAR
-star_dir <- "/mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/results/STAR"
+star_dir <- "../results_final/STAR"
 
 samples <- c("SRR33445252", "SRR33445253", "SRR33445254",
              "SRR33445260", "SRR33445261", "SRR33445262")

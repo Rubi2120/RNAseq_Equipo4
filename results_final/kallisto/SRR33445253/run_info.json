@@ -1,0 +1,13 @@
+{
+	"n_targets": 142552,
+	"n_bootstraps": 0,
+	"n_processed": 25779245,
+	"n_pseudoaligned": 24015743,
+	"n_unique": 10068620,
+	"p_pseudoaligned": 93.2,
+	"p_unique": 39.1,
+	"kallisto_version": "0.45.0",
+	"index_version": 10,
+	"start_time": "Tue Apr 28 02:03:10 2026",
+	"call": "kallisto quant --index /mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/data/reference/mouse_M24.idx --output-dir /mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/results/kallisto/SRR33445253 --threads 8 /mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/data/processed/control/SRR33445253/SRR33445253_1_paired.fastq.gz /mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/data/processed/control/SRR33445253/SRR33445253_2_paired.fastq.gz"
+}

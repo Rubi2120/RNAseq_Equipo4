@@ -139,10 +139,10 @@ Se realizo normalizacion rlog, PCA, volcano plot, heatmap y analisis de enriquec
 
 ## Referencias
 
-1. Dunn, A. et al., 2026. Altered hepatic metabolism in Down syndrome. *Cell Reports*. DOI: 10.1016/j.celrep.2025.116835
+1. Dunn LN, Niemeyer BF, Eduthan NP et al. (2026). Altered hepatic metabolism in Down syndrome. *Cell Reports*. https://doi.org/10.1016/j.celrep.2025.116835
 
-2. [Referencia adicional 2 — Autor, Año, Revista, DOI]
+2. Chen et al. (2026). Gene dosage imbalance disrupts systemic metabolism in the Dp16 Down syndrome mouse model. *eLife*. https://doi.org/10.7554/eLife.110476
 
-3. [Referencia adicional 3 — Autor, Año, Revista, DOI]
+3. Love MI, Huber W, Anders S. (2014). Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. *Genome Biology*, 15:550. https://doi.org/10.1186/s13059-014-0550-8
 
-4. [Referencia adicional 4 — Autor, Año, Revista, DOI]
+4. Dobin A, Davis CA, Schlesinger F, et al. (2013). STAR: ultrafast universal RNA-seq aligner. *Bioinformatics*, 29(1):15-21. https://doi.org/10.1093/bioinformatics/bts635

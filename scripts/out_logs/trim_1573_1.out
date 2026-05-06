@@ -1,0 +1,7 @@
+TrimmomaticPE: Started with arguments: data/raw/control/SRR33445253_1.fastq data/raw/control/SRR33445253_2.fastq my_results/trimmed/SRR33445253_1_trim.fastq my_results/trimmed/SRR33445253_1_unpaired.fastq my_results/trimmed/SRR33445253_2_trim.fastq my_results/trimmed/SRR33445253_2_unpaired.fastq ILLUMINACLIP:data/adapters/TruSeq3-PE.fa:2:30:10 SLIDINGWINDOW:4:20 MINLEN:36
+Multiple cores found: Using 16 threads
+Using PrefixPair: 'TACACTCTTTCCCTACACGACGCTCTTCCGATCT' and 'GTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT'
+ILLUMINACLIP: Using 1 prefix pairs, 0 forward/reverse sequences, 0 forward only sequences, 0 reverse only sequences
+Quality encoding detected as phred33
+Input Read Pairs: 43357474 Both Surviving: 25779126 (59.46%) Forward Only Surviving: 15864055 (36.59%) Reverse Only Surviving: 625469 (1.44%) Dropped: 1088824 (2.51%)
+TrimmomaticPE: Completed successfully

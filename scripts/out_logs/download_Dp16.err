@@ -1,0 +1,144 @@
+--2026-04-20 20:23:26--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/051/SRR33445251/SRR33445251.fastq.gz
+           => ‘SRR33445251.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/051/SRR33445251 ... done.
+==> SIZE SRR33445251.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445251.fastq.gz ... 
+No such file ‘SRR33445251.fastq.gz’.
+
+--2026-04-20 20:23:28--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/052/SRR33445252/SRR33445252.fastq.gz
+           => ‘SRR33445252.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/052/SRR33445252 ... done.
+==> SIZE SRR33445252.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445252.fastq.gz ... 
+No such file ‘SRR33445252.fastq.gz’.
+
+--2026-04-20 20:23:30--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/053/SRR33445253/SRR33445253.fastq.gz
+           => ‘SRR33445253.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/053/SRR33445253 ... done.
+==> SIZE SRR33445253.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445253.fastq.gz ... 
+No such file ‘SRR33445253.fastq.gz’.
+
+--2026-04-20 20:23:31--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/054/SRR33445254/SRR33445254.fastq.gz
+           => ‘SRR33445254.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/054/SRR33445254 ... done.
+==> SIZE SRR33445254.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445254.fastq.gz ... 
+No such file ‘SRR33445254.fastq.gz’.
+
+--2026-04-20 20:23:33--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/055/SRR33445255/SRR33445255.fastq.gz
+           => ‘SRR33445255.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/055/SRR33445255 ... done.
+==> SIZE SRR33445255.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445255.fastq.gz ... 
+No such file ‘SRR33445255.fastq.gz’.
+
+--2026-04-20 20:23:35--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/056/SRR33445256/SRR33445256.fastq.gz
+           => ‘SRR33445256.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/056/SRR33445256 ... done.
+==> SIZE SRR33445256.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445256.fastq.gz ... 
+No such file ‘SRR33445256.fastq.gz’.
+
+--2026-04-20 20:23:37--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/057/SRR33445257/SRR33445257.fastq.gz
+           => ‘SRR33445257.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/057/SRR33445257 ... done.
+==> SIZE SRR33445257.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445257.fastq.gz ... 
+No such file ‘SRR33445257.fastq.gz’.
+
+--2026-04-20 20:23:38--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/058/SRR33445258/SRR33445258.fastq.gz
+           => ‘SRR33445258.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/058/SRR33445258 ... done.
+==> SIZE SRR33445258.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445258.fastq.gz ... 
+No such file ‘SRR33445258.fastq.gz’.
+
+--2026-04-20 20:23:40--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/059/SRR33445259/SRR33445259.fastq.gz
+           => ‘SRR33445259.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/059/SRR33445259 ... done.
+==> SIZE SRR33445259.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445259.fastq.gz ... 
+No such file ‘SRR33445259.fastq.gz’.
+
+--2026-04-20 20:23:42--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/060/SRR33445260/SRR33445260.fastq.gz
+           => ‘SRR33445260.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/060/SRR33445260 ... done.
+==> SIZE SRR33445260.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445260.fastq.gz ... 
+No such file ‘SRR33445260.fastq.gz’.
+
+--2026-04-20 20:23:44--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/061/SRR33445261/SRR33445261.fastq.gz
+           => ‘SRR33445261.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/061/SRR33445261 ... done.
+==> SIZE SRR33445261.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445261.fastq.gz ... 
+No such file ‘SRR33445261.fastq.gz’.
+
+--2026-04-20 20:23:45--  ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR334/062/SRR33445262/SRR33445262.fastq.gz
+           => ‘SRR33445262.fastq.gz’
+Resolving ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)... 193.62.193.165
+Connecting to ftp.sra.ebi.ac.uk (ftp.sra.ebi.ac.uk)|193.62.193.165|:21... connected.
+Logging in as anonymous ... Logged in!
+==> SYST ... done.    ==> PWD ... done.
+==> TYPE I ... done.  ==> CWD (1) /vol1/fastq/SRR334/062/SRR33445262 ... done.
+==> SIZE SRR33445262.fastq.gz ... done.
+
+==> PASV ... done.    ==> RETR SRR33445262.fastq.gz ... 
+No such file ‘SRR33445262.fastq.gz’.
+

@@ -220,50 +220,8 @@ knitr::include_graphics("../figures/fastqc_per_base_sequence_quality_plot_trimme
 
 El siguiente diagrama muestra el flujo completo del análisis desde los datos crudos hasta la importación en R:
 
-```{r diagrama, echo=FALSE, fig.cap="Figura 8. Diagrama de flujo del pipeline de análisis de RNA-seq.", out.width="100%"}
-# Diagrama generado con DiagrammeR
-library(DiagrammeR)
-
-grViz("
-digraph pipeline {
-  graph [layout = dot, rankdir = TB, fontname = Helvetica]
-  node [shape = box, style = filled, fontname = Helvetica, fontsize = 11]
-
-  A [label = 'Datos crudos\\n(.fastq)', fillcolor = '#AED6F1']
-  B [label = 'FastQC + MultiQC\\n(Control de calidad)', fillcolor = '#A9DFBF']
-  C [label = 'Trimmomatic v0.33\\n(Eliminación de adaptadores)', fillcolor = '#F9E79F']
-  D [label = 'FastQC + MultiQC\\n(Calidad post-trimming)', fillcolor = '#A9DFBF']
-  E [label = 'Datos limpios\\n(_paired.fastq.gz)', fillcolor = '#AED6F1']
-
-  F [label = 'Kallisto index\\n(gencode.vM24.transcripts.fa.gz → mouse_M24.idx)', fillcolor = '#F9E79F']
-  G [label = 'Kallisto quant\\n(Pseudoalineamiento)', fillcolor = '#F9E79F']
-  H [label = 'abundance.h5 + abundance.tsv', fillcolor = '#AED6F1']
-
-  I [label = 'STAR index\\n(GRCm38 + gencode.vM24.gtf)', fillcolor = '#FADBD8']
-  J [label = 'STAR align\\n(--quantMode GeneCounts)', fillcolor = '#FADBD8']
-  K [label = '.bam + ReadsPerGene.out.tab', fillcolor = '#AED6F1']
-
-  L [label = 'tximport + tx2gene\\n(Nivel de GEN)', fillcolor = '#D7BDE2']
-  M [label = 'DESeqDataSetFromTximport\\n(Objeto DESeq2 - Kallisto)', fillcolor = '#D7BDE2']
-  N [label = 'DESeqDataSetFromMatrix\\n(Objeto DESeq2 - STAR)', fillcolor = '#D7BDE2']
-
-  A -> B -> C -> D -> E
-  E -> F -> G -> H -> L -> M
-  E -> I -> J -> K -> N
-}
-")
-```
-
----
-
-## 5. Alineamiento y cuantificación
-
-### 5.1 Pseudoalineamiento con Kallisto
-
-**¿Qué es Kallisto?**
-Kallisto realiza un **pseudoalineamiento** usando k-mers (secuencias cortas de 31 bp) para determinar a qué transcrito pertenece cada lectura. Es extremadamente rápido y trabaja con el transcriptoma (ARNm conocidos de Gencode vM24).
-
-**Verificación del índice:**
+```{r diagrama, echo=FALSE, fig.cap="Figura 8. Diagrama de flujo del pipeline de RNA-seq.", out.width="100%"}
+knitr::include_graphics("../figures/pipeline_rnaseq.png")
 ```
 [index] k-mer length: 31
 [index] number of targets: 142,552

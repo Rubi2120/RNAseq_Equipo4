@@ -1,3 +1,9 @@
+## Abstract
+
+Se analizaron datos de RNA-seq de tejido hepático de ratón adulto para comparar la expresión génica entre ratones wild-type (WT) y el modelo Dp(16)1Yey (Dp16) de Síndrome de Down, utilizando datos del bioproyecto PRJNA1259260 (6 muestras: 3 WT y 3 Dp16, Illumina NovaSeq 6000, 150 bp paired-end, selección polyA). El control de calidad se realizó con FastQC y MultiQC, seguido de limpieza de adaptadores TruSeq3-PE con Trimmomatic (< 3% de lecturas descartadas). El pseudoalineamiento se realizó con Kallisto (>94% de alineamiento) y el alineamiento con STAR (>87% de lecturas mapeadas únicamente) usando como referencia Gencode vM24 y GRCm38. El análisis de expresión diferencial con DESeq2 identificó genes significativamente expresados entre ambas condiciones (padj < 0.05), incluyendo genes relacionados con metabolismo hepático como *Apoa4*, *Papss2* y *Ces1g*, consistentes con los hallazgos de Dunn et al. (2026). El análisis funcional con GSEA identificó términos GO enriquecidos relacionados con splicing de RNA, respuesta a quimiocinas y autofagia, sugiriendo alteraciones en el procesamiento transcriptómico asociadas a la trisomía del cromosoma 16.
+
+---
+
 ---
 title: "Entregable 4: Genes Diferencialmente Expresados y Análisis Funcional"
 author: "Equipo 4 - Leonardo Ivan Anaya Gonzalez & Rubií Martínez Chavarría"

@@ -19,7 +19,7 @@ Se realizo un analisis de RNA-seq de tejido hepatico de raton adulto comparando 
 
 ## Reporte renderizado
 
-[Ver reporte completo en GitHub Pages](https://rubi2120.github.io/RNAseq_Equipo4/Entregable3_final.html)
+[Ver reporte completo en GitHub Pages](https://rubi2120.github.io/RNAseq_Equipo4/Entregable3_corregido_final.html)
 
 ---
 

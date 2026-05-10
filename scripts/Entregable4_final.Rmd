@@ -1,6 +1,6 @@
 ---
 title: "Entregable 4: Normalización, Expresión Diferencial y Análisis Funcional"
-author: "Equipo 4 - Leonardo Ivan Anaya Gonzalez & Rubií Martínez Chavarría"
+author: "Equipo 4 -  Rubí Martínez Chavarría & Leonardo Ivan Anaya Gonzalez"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -15,17 +15,18 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, dev = "png"
 .libPaths(c("~/R/library", .libPaths()))
 ```
 
----
+------------------------------------------------------------------------
 
 ## Descripción del equipo
 
-- **Equipo:** Equipo 4
-- **Integrantes:**
-  - Leonardo Ivan Anaya Gonzalez (lanaya)
-  - Rubií Martínez Chavarría (rmartinez)
-- **Correos electrónicos:** leoianayaglz@gmail.com | rubimarch201@gmail.com
+-   **Equipo:** Equipo 4
+-   **Integrantes:**
 
----
+    -  Rubí Martínez Chavarría (rmartinez)
+    -  Leonardo Ivan Anaya Gonzalez (lanaya)
+-   **Correos electrónicos:** [leoianayaglz\@gmail.com](mailto:leoianayaglz@gmail.com){.email} \| [rubimarch201\@gmail.com](mailto:rubimarch201@gmail.com){.email}
+
+------------------------------------------------------------------------
 
 ## Contexto
 
@@ -33,14 +34,14 @@ Este entregable continúa a partir del Entregable 3, donde se realizó el contro
 
 En este entregable realizamos:
 
-1. Normalización de cuentas (VST, z-score, melted counts)
-2. Análisis exploratorio de componentes principales (PCA) y corrección de batch effect
-3. Análisis de expresión diferencial con DESeq2 y shrinkage de log2FC
-4. Visualización: volcano, MA plot, heatmap
-5. Comparación Kallisto vs STAR
-6. Análisis funcional de términos GO con gprofiler2
+1.  Normalización de cuentas (VST, z-score, melted counts)
+2.  Análisis exploratorio de componentes principales (PCA) y corrección de batch effect
+3.  Análisis de expresión diferencial con DESeq2 y shrinkage de log2FC
+4.  Visualización: volcano, MA plot, heatmap
+5.  Comparación Kallisto vs STAR
+6.  Análisis funcional de términos GO con gprofiler2
 
----
+------------------------------------------------------------------------
 
 ## 0. Cargar paquetes
 
@@ -63,12 +64,12 @@ library(limma)         # Corrección de batch effect
 library(apeglm)        # Prior para lfcShrink
 ```
 
----
+------------------------------------------------------------------------
 
 ## 1. Cargar datos y reconstruir objetos DESeq2
 
 ```{r reconstruir-objetos}
-# ── Rutas ─────────────────────────────────────────────────────────────────────
+# Rutas
 ruta_kallisto <- "/Users/dubsirubs/Desktop/RNAseq_Equipo4/results_final/kallisto"
 star_dir      <- "/Users/dubsirubs/Desktop/RNAseq_Equipo4/results_final/STAR"
 outdir        <- "/Users/dubsirubs/Desktop/RNAseq_Equipo4/results_final/"
@@ -77,12 +78,12 @@ figdir        <- "/Users/dubsirubs/Desktop/RNAseq_Equipo4/results_final/figures/
 samples <- c("SRR33445252","SRR33445253","SRR33445254",
              "SRR33445260","SRR33445261","SRR33445262")
 
-# ── Metadata ──────────────────────────────────────────────────────────────────
+# Metadata
 metadata <- read.csv("/Users/dubsirubs/Desktop/RNAseq_Equipo4/metadata.csv")
 metadata$genotype <- factor(metadata$genotype, levels = c("WT", "Dp16"))
 rownames(metadata) <- metadata$sample
 
-# ── Kallisto → tximport → DESeq2 ──────────────────────────────────────────────
+# Kallisto → tximport → DESeq2
 archivos_h5 <- file.path(ruta_kallisto, samples, "abundance.h5")
 names(archivos_h5) <- samples
 
@@ -102,7 +103,7 @@ dds <- DESeqDataSetFromTximport(txi.kallisto,
 keep <- rowSums(counts(dds) >= 10) >= 3
 dds  <- dds[keep, ]
 
-# ── STAR → DESeq2 ─────────────────────────────────────────────────────────────
+# STAR → DESeq2
 count_list  <- lapply(samples, function(s) {
   f <- file.path(star_dir, s, paste0(s, ".ReadsPerGene.out.tab"))
   read.table(f, skip = 4, header = FALSE)[, c(1, 2)]
@@ -120,20 +121,20 @@ dds_star  <- dds_star[keep_star, ]
 cat("Genes retenidos — Kallisto:", nrow(dds), "| STAR:", nrow(dds_star), "\n")
 ```
 
----
+------------------------------------------------------------------------
 
 ## 2. Normalización de las cuentas
 
 Las cuentas crudas de RNA-seq no son comparables entre muestras porque dependen del tamaño total de la librería y, en el caso de Kallisto, también de la longitud de los transcritos. La **VST (Variance Stabilizing Transformation)** estabiliza la varianza a lo largo de todo el rango de expresión: los genes de baja expresión dejan de tener una varianza artificialmente alta, y los datos quedan en una escala apta para PCA, heatmaps y clustering. Se usa `blind = FALSE` porque conocemos el diseño experimental — esto permite que la transformación tome en cuenta el genotipo, lo cual es correcto cuando el objetivo es visualización comparativa.
 
-### 2.1 VST — Kallisto
+### 2.1 VST y Kallisto
 
 ```{r vst-kallisto}
 vsd_kallisto <- vst(dds, blind = FALSE)
 cat("Dimensiones VST Kallisto (genes × muestras):", dim(vsd_kallisto), "\n")
 ```
 
-### 2.2 VST — STAR
+### 2.2 VST y STAR
 
 ```{r vst-star}
 vsd_star <- vst(dds_star, blind = FALSE)
@@ -165,7 +166,7 @@ ggplot(melted_norm_counts,
         plot.background = element_rect(fill = "white"))
 ```
 
-**Interpretación:** Cajas con medianas a niveles similares entre todas las muestras confirman que la normalización VST corrigió exitosamente las diferencias de tamaño de librería. Cualquier diferencia residual en la distribución refleja variación biológica real entre genotipos, no un sesgo técnico.
+**Interpretación:** La Figura 1 muestra que las medianas de las seis muestras se encuentran alineadas en torno a 9, lo que confirma que la normalización VST corrigió exitosamente las diferencias de tamaño de librería. Los rangos intercuartílicos son homogéneos entre muestras, sin outliers sistemáticos que indiquen problemas técnicos. Los puntos extremos superiores (\~17–21) corresponden a genes altamente expresados presentes en todas las muestras por igual, lo que refleja una característica biológica esperada. La ausencia de separación sistemática entre genotipos (WT vs Dp16) en esta distribución global es correcta: las diferencias específicas por gen se detectarán en el análisis diferencial.
 
 ### 2.4 Z-score
 
@@ -186,13 +187,15 @@ cat("Genes con varianza > 0:", nrow(zscore_mat), "\n")
 cat("Muestras:", ncol(zscore_mat), "\n")
 ```
 
----
+De los \~20,000+ genes del genoma de ratón, 14,715 muestran al menos algo de variación entre las 6 muestras. Esto es normal ya que muchos genes housekeeping se expresan de forma constitutiva e idéntica en todas las muestras y quedan fuera. Estos 14,715 son los informativos para clustering y heatmaps.
+
+------------------------------------------------------------------------
 
 ## 3. Análisis exploratorio: PCA
 
 El PCA reduce la dimensionalidad de los datos (miles de genes) a componentes que capturan la mayor variación. Su propósito es verificar que las muestras agrupan por la variable biológica de interés (genotipo) y no por variables técnicas (fecha, técnico, equipo de secuenciación), lo que indicaría un batch effect.
 
-### 3.1 PCA — Kallisto
+### 3.1 PCA y Kallisto
 
 ```{r pca-kallisto, fig.cap="Figura 2. PCA de muestras normalizadas con VST (Kallisto). Cada punto representa una muestra; el color indica el genotipo (azul = WT, rojo = Dp16). Las elipses muestran la dispersión de cada grupo.", fig.width=7, fig.height=5}
 mat_k <- assay(vsd_kallisto)
@@ -220,7 +223,7 @@ ggplot(pca_df_k, aes(x = PC1, y = PC2, color = genotype, label = sample)) +
   theme(plot.background = element_rect(fill = "white"))
 ```
 
-**Interpretación:** La separación de las muestras WT y Dp16 a lo largo de PC1 o PC2 confirma que el **genotipo es la principal fuente de variación** en los datos. Esto es la señal biológica esperada: el modelo de trisomía 16 (Dp16) produce una firma transcriptómica diferente a la del ratón silvestre. Si ambos genotipos se mezclaran sin patrón, indicaría que la variación técnica domina sobre la biológica.
+**Interpretación:** La Figura 2 muestra una separación clara entre genotipos a lo largo de PC1(43.9% de la varianza total): las tres réplicas WT se agrupan a valores negativos y las tres réplicas Dp16 a valores positivos. Esto indica que el genotipo es la principal fuente de variación en los datos, lo cual es la señal biológica esperada en un modelo de trisomía. PC2 (24.9%) captura variabilidad dentro de los grupos, consistente con la variación biológica natural entre réplicas individuales con n = 3. No se observa ninguna muestra fuera de su grupo genotípico, lo que descarta batch effects evidentes en este primer análisis exploratorio.
 
 ### 3.2 Scree Plot
 
@@ -248,9 +251,9 @@ ggplot(df_scree, aes(x = Componente, y = Varianza)) +
   theme(plot.background = element_rect(fill = "white"))
 ```
 
-**Interpretación:** Si PC1 y PC2 juntos explican una fracción grande de la varianza total (>50%), el gráfico de PCA de dos dimensiones es una representación fiel de la estructura global de los datos. Un scree plot con caída pronunciada en los primeros componentes indica que la variación está bien concentrada y los datos tienen una estructura clara.
+**Interpretación:** PC1 y PC2 capturan conjuntamente el 68.8% de la varianza total, lo que indica que la representación bidimensional del PCA es una descripción  fiel de la estructura global de los datos. La caída pronunciada entre  PC1 (43.9%) y los componentes siguientes confirma que la mayor parte de  la variación está concentrada en el primer eje, consistente con una diferencia transcriptómica dominante entre genotipos.
 
-### 3.3 PCA — STAR
+### 3.3 PCA y STAR
 
 ```{r pca-star, fig.cap="Figura 4. PCA de muestras normalizadas con VST (STAR). Se esperan los mismos patrones de agrupamiento que en Kallisto si ambos alineadores son concordantes.", fig.width=7, fig.height=5}
 mat_s <- assay(vsd_star)
@@ -278,7 +281,7 @@ ggplot(pca_df_s, aes(x = PC1, y = PC2, color = genotype, label = sample)) +
   theme(plot.background = element_rect(fill = "white"))
 ```
 
-**Interpretación:** La concordancia entre el PCA de Kallisto y el de STAR valida que el agrupamiento por genotipo no es un artefacto del método de cuantificación, sino una señal biológica real. Diferencias menores entre ambos PCAs son esperables dado que Kallisto realiza pseudoalineamiento probabilístico mientras que STAR realiza alineamiento directo al genoma.
+**Interpretación:** El PCA de STAR reproduce el mismo patrón que Kallisto: las tres réplicas WT se agrupan a valores negativos de PC1 (44.6%) y las tres réplicas Dp16 a valores positivos. La concordancia entre ambos pipelines confirma que la separación entre genotipos no es un artefacto del método de cuantificación sino una señal biológica reproducible, independientemente de si se usa pseudoalineamiento (Kallisto) o alineamiento directo al genoma (STAR).
 
 ### 3.4 Corrección de batch effect
 
@@ -308,15 +311,13 @@ ggplot(pcaData_bc, aes(PC1, PC2, color = genotype, label = name)) +
   theme(plot.background = element_rect(fill = "white"))
 ```
 
-**Interpretación:** Si la separación entre WT y Dp16 se mantiene o mejora tras la corrección, confirma que la variación biológica debida al genotipo es sólida y no dependía de efectos técnicos. Si el patrón cambia drásticamente, indicaría que parte de la separación original era de origen técnico.
-
----
+ **Interpretación:** Tras la corrección, PC1 aumenta de 43.9% a 67%, lo que indica que la variación asociada al genotipo se concentra aún más en el primer componente al eliminar el ruido técnico residual. La separación entre WT y Dp16 se mantiene clara, confirmando que la señal biológica es sólida y no dependía de efectos técnicos. SRR33445254 continúa ligeramente elevado en PC2, sugiriendo variabilidad biológica propia de esa réplica que no corresponde a un artefacto corregible.
 
 ## 4. Análisis de Expresión Diferencial (DESeq2)
 
 DESeq2 modela las cuentas con una distribución binomial negativa que captura la sobredispersión típica de RNA-seq. El análisis realiza tres pasos: (1) estimación de **factores de tamaño** para corregir diferencias en el total de lecturas, (2) estimación de la **dispersión** gen a gen, y (3) ajuste del modelo lineal generalizado y prueba de Wald para obtener log2FC y p-values.
 
-### 4.1 DESeq2 — Kallisto
+### 4.1 DESeq2 y Kallisto
 
 ```{r deseq2-kallisto}
 # relevel: WT como referencia para que todos los FC se interpreten como "Dp16 vs WT"
@@ -332,7 +333,7 @@ res_kallisto <- results(dds,
 summary(res_kallisto)
 ```
 
-### 4.2 Shrinkage de log2FC — Kallisto
+### 4.2 Shrinkage de log2FC y Kallisto
 
 Genes con baja expresión o pocas réplicas pueden presentar log2FC muy grandes e inestables, no porque realmente cambien mucho, sino porque hay poca información para estimarlos. El shrinkage con **apeglm** aplica un prior adaptativo que "contrae" esos valores extremos hacia 0, sin modificar los p-values ni el número de genes significativos. El resultado son estimaciones de FC más confiables biológicamente y visualizaciones más limpias.
 
@@ -344,7 +345,7 @@ res_kallisto_shrink <- lfcShrink(dds,
 summary(res_kallisto_shrink)
 ```
 
-### 4.3 DESeq2 — STAR
+### 4.3 DESeq2 y STAR
 
 ```{r deseq2-star}
 dds_star$genotype <- relevel(dds_star$genotype, ref = "WT")
@@ -393,13 +394,15 @@ kable(resumen,
                 full_width = FALSE)
 ```
 
-**Interpretación:** Un número similar de DEGs entre Kallisto y STAR indica concordancia entre los dos métodos de cuantificación. Diferencias grandes en el total pueden reflejar que un alineador es más conservador que el otro, o que genes multi-mapeo son tratados de forma diferente. La columna de up/down-regulated muestra el balance de la respuesta transcriptómica: si predominan los genes up-regulated, el genotipo Dp16 activa más procesos de los que reprime.
+**Interpretación:** El análisis diferencial identificó 400 DEGs en Kallisto y 363 en STAR (padj \< 0.05), con un balance consistente entre pipelines: aproximadamente 57% de los genes están reprimidos en Dp16 respecto a WT y 43% activados. Este patrón sugiere que la trisomía del cromosoma 16 no simplemente incrementa la expresión génica global, sino que genera una reorganización transcriptómica donde la represión domina ligeramente sobre la activación en hígado adulto.
 
----
+La concordancia entre Kallisto y STAR (\~90% en el total de DEGs y balance up/down idéntico) indica que este patrón es robusto e independiente del método de cuantificación. La diferencia en magnitud respecto a los \~1,500 DEGs reportados por Dunn et al. (2026) es atribuible al menor poder estadístico de este análisis (n=3 por genotipo vs n=6 en el paper original); los genes detectados aquí representan los cambios de expresión más robustos y de mayor magnitud del dataset.
+
+------------------------------------------------------------------------
 
 ## 5. Top genes más significativos
 
-### Top 20 DEGs — Kallisto
+### Top 20 DEGs y Kallisto
 
 ```{r top20-kallisto}
 top20_k <- sig_kallisto %>%
@@ -415,7 +418,7 @@ kable(top20_k,
                 full_width = FALSE)
 ```
 
-### Top 20 DEGs — STAR
+### Top 20 DEGs y STAR
 
 ```{r top20-star}
 top20_s <- sig_star %>%
@@ -433,13 +436,13 @@ kable(top20_s,
 
 **Interpretación de las tablas:** `baseMean` es la expresión promedio del gen en todas las muestras (a mayor baseMean, más abundante es el transcrito). `log2FoldChange` indica la dirección y magnitud del cambio en Dp16 respecto a WT: un valor positivo significa que el gen está más expresado en Dp16, negativo que está menos expresado. `lfcSE` es el error estándar del FC después del shrinkage. El `padj` es el p-value corregido por el método de Benjamini-Hochberg para controlar la tasa de falsos positivos.
 
----
+------------------------------------------------------------------------
 
 ## 6. Visualización de resultados
 
-### 6.1 Volcano Plot — Kallisto
+### 6.1 Volcano Plot y Kallisto
 
-El volcano plot enfrenta la magnitud del cambio (`log2FC`, eje X) contra la significancia estadística (`-log10(padj)`, eje Y). Los genes biológicamente más relevantes se encuentran en las esquinas superiores: alto FC y muy significativos. Las líneas discontinuas marcan los umbrales de corte: |log2FC| > 1 (cambio de al menos 2 veces) y padj < 0.05.
+El volcano plot enfrenta la magnitud del cambio (`log2FC`, eje X) contra la significancia estadística (`-log10(padj)`, eje Y). Los genes biológicamente más relevantes se encuentran en las esquinas superiores: alto FC y muy significativos. Las líneas discontinuas marcan los umbrales de corte: \|log2FC\| \> 1 (cambio de al menos 2 veces) y padj \< 0.05.
 
 ```{r volcano-kallisto, fig.cap="Figura 6. Volcano plot — Kallisto (Dp16 vs WT). Rojo: genes up-regulated en Dp16 (log2FC > 1, padj < 0.05). Azul: genes down-regulated (log2FC < -1, padj < 0.05). Gris: sin cambio significativo. Las etiquetas corresponden a los 10 genes con menor padj.", fig.width=8, fig.height=6}
 df_k <- as.data.frame(res_kallisto_shrink) %>%
@@ -474,9 +477,9 @@ ggplot(df_k, aes(x = log2FoldChange, y = -log10(padj))) +
   theme(plot.background = element_rect(fill = "white"))
 ```
 
-**Interpretación:** Los genes en la esquina superior derecha están sobreexpresados en Dp16 con alta significancia; los de la esquina superior izquierda están subexpresados. Una nube de puntos dispersa sin estructura indica baja señal biológica; puntos concentrados en las esquinas superiores indican una respuesta transcriptómica fuerte y específica al genotipo. El shrinkage hace que los genes con baja expresión (que tienden a tener FC grandes por ruido) ya no dominen la gráfica.
+**Interpretación:** Los genes más significativos y con mayor cambio se concentran en ambas esquinas superiores, confirmando una respuesta transcriptómica clara en Dp16. Los genes etiquetados con mayor significancia en down-regulated (ENSMUSG00000097148.2, ENSMUSG00000117780.1) tienen log2FC entre -3 y -4, indicando una reducción de expresión de 8 a 16 veces respecto a WT. En up-regulated, ENSMUSG00000001665.11 destaca con alta significancia y log2FC \~1.6.El shrinkage es evidente: la nube gris está comprimida cerca de log2FC = 0, y los genes de baja expresión no dominan la gráfica.
 
-### 6.2 Volcano Plot — STAR
+### 6.2 Volcano Plot y STAR
 
 ```{r volcano-star, fig.cap="Figura 7. Volcano plot — STAR (Dp16 vs WT). Mismos criterios de corte que Kallisto (|log2FC| > 1, padj < 0.05). La comparación visual entre ambos volcano plots permite evaluar la concordancia entre alineadores.", fig.width=8, fig.height=6}
 df_s <- as.data.frame(res_star_shrink) %>%
@@ -511,9 +514,9 @@ ggplot(df_s, aes(x = log2FoldChange, y = -log10(padj))) +
   theme(plot.background = element_rect(fill = "white"))
 ```
 
-**Interpretación:** Si los genes más significativos etiquetados en el volcano de STAR coinciden con los del volcano de Kallisto, la concordancia entre alineadores es alta. Si aparecen genes distintos en las esquinas, puede indicar que esos genes tienen lecturas ambiguas que Kallisto y STAR manejan de forma diferente (por ejemplo, genes con múltiples isoformas o regiones repetidas).
+**Interpretación:** El patrón es concordante con Kallisto, los mismos genes (ENSMUSG00000117780.1, ENSMUSG00000029417.9, ENSMUSG00000097148.2) aparecen entre los más significativos en ambos alineadores, lo que confirma que son señales biológicas reales y no artefactos de un pipeline específico.
 
-### 6.3 MA Plot — Kallisto
+### 6.3 MA Plot y Kallisto
 
 El MA plot muestra la relación entre la expresión media (`baseMean`, eje X en log2) y el log2FC (eje Y). Es una herramienta diagnóstica: en datos bien normalizados, los puntos grises (no significativos) deben estar centrados en log2FC = 0 a lo largo de todo el rango de expresión. El efecto del shrinkage es claramente visible: los genes con baja expresión media (izquierda del eje X) tienen FC contraídos hacia 0, mientras que los genes con alta expresión mantienen sus FC originales.
 
@@ -537,9 +540,9 @@ ggplot(ma_k, aes(x = baseMean_log, y = log2FoldChange, color = significant)) +
   theme(plot.background = element_rect(fill = "white"))
 ```
 
-**Interpretación:** La "compresión" de puntos grises hacia log2FC = 0 en el extremo izquierdo del eje X (genes de baja expresión) es precisamente el efecto del shrinkage apeglm. Los puntos azules (DEGs) a la derecha del eje X corresponden a genes con expresión media alta y FC estables — estos son los candidatos más confiables biológicamente. Un sesgo visible hacia arriba o abajo de la línea horizontal indicaría un problema de normalización.
+**Interpretación:**Los puntos grises están centrados en log2FC = 0 a lo largo de todo el rango de expresión, confirmando que la normalización no introdujo sesgos sistemáticos. Los DEGs significativos (azul) se distribuyen tanto por encima como por debajo de la línea de referencia, consistente con el balance observado de \~57% down y \~43% up. La compresión de puntos hacia 0 en el extremo izquierdo (genes poco expresados) es el efecto esperado del shrinkage apeglm.
 
-### 6.4 MA Plot — STAR
+### 6.4 MA Plot y STAR
 
 ```{r maplot-star, fig.cap="Figura 9. MA plot — STAR (shrinkage apeglm). Se esperan patrones similares a Kallisto. Diferencias en la densidad de puntos azules reflejan variaciones en el número de DEGs detectados por cada alineador.", fig.width=7, fig.height=5}
 ma_s <- as.data.frame(res_star_shrink) %>%
@@ -561,7 +564,9 @@ ggplot(ma_s, aes(x = baseMean_log, y = log2FoldChange, color = significant)) +
   theme(plot.background = element_rect(fill = "white"))
 ```
 
-### 6.5 Heatmap — Top 20 DEGs (Kallisto)
+**Interpretación:**El patrón es prácticamente idéntico al de Kallisto, con DEGs distribuidos simétricamente alrededor de log2FC = 0 y la misma compresión en genes de baja expresión. La densidad ligeramente menor de puntos azules refleja los 37 DEGs menos detectados respecto a Kallisto, atribuible a diferencias en cómo cada alineador maneja lecturas multi-mapeo.
+
+### 6.5 Heatmap y Top 20 DEGs (Kallisto)
 
 El heatmap visualiza los patrones de expresión de los 20 genes con menor padj. Cada fila es un gen, cada columna es una muestra. Los colores representan la expresión estandarizada por fila (z-score dentro del heatmap): rojo = expresión alta relativa, azul = expresión baja relativa. El clustering jerárquico de filas y columnas se realiza de forma no supervisada — si las muestras del mismo genotipo se agrupan juntas, significa que los genes seleccionados realmente distinguen WT de Dp16.
 
@@ -586,9 +591,9 @@ pheatmap(mat_heat_k,
          main              = "Top 20 DEGs — Kallisto (escala por fila)")
 ```
 
-**Interpretación:** Si las columnas WT y Dp16 se agrupan por separado en el dendrograma superior (sin que nosotros lo indiquemos), confirma que los 20 genes más significativos son suficientes para distinguir ambos genotipos. Genes que aparecen en rojo en Dp16 y azul en WT están sobreexpresados en el modelo de trisomía; los que aparecen al revés están subexpresados. Bloques de genes con patrones similares (en el dendrograma lateral) podrían estar co-regulados o pertenecer a la misma vía biológica.
+**Interpretación:** El clustering jerárquico no supervisado agrupa correctamente las tres réplicas Dp16 (izquierda) separadas de las tres réplicas WT (derecha), sin que se le indique el genotipo. Esto confirma que los 20 genes más significativos son suficientes para distinguir ambos genotipos. Se observan dos bloques principales de genes: uno con expresión alta en Dp16 (rojo) que incluye ENSMUSG00000001665.11 y ENSMUSG00000006494.11, y otro con expresión baja en Dp16 (azul) que incluye ENSMUSG00000097148.2 y ENSMUSG00000117780.1.
 
-### 6.6 Heatmap — Top 20 DEGs (STAR)
+### 6.6 Heatmap y Top 20 DEGs (STAR)
 
 ```{r heatmap-star, fig.cap="Figura 11. Heatmap de los 20 genes con menor padj — STAR (VST, escalado por fila). La comparación con el heatmap de Kallisto (Figura 10) permite identificar genes consistentemente significativos en ambos alineadores.", fig.width=8, fig.height=7}
 top_genes_s <- head(order(res_star$padj, na.last = TRUE), 20)
@@ -607,9 +612,9 @@ pheatmap(mat_heat_s,
          main              = "Top 20 DEGs — STAR (escala por fila)")
 ```
 
-**Interpretación:** Genes que aparecen en el top 20 de ambos alineadores con el mismo patrón de color son los candidatos más robustos del análisis. Genes exclusivos de uno de los dos heatmaps merecen una revisión adicional (por ejemplo, si son genes con múltiples isoformas o con lecturas ambiguas).
+**Interpretación:** El patrón de clustering es idéntico — Dp16 a la izquierda, WT a la derecha — y varios genes se repiten entre ambos top 20 (ENSMUSG00000001665.11, ENSMUSG00000069456.4, ENSMUSG00000029417.9, ENSMUSG00000074240.5), lo que los identifica como los candidatos más robustos del análisis.
 
----
+------------------------------------------------------------------------
 
 ## 7. Comparación Kallisto vs STAR
 
@@ -651,39 +656,9 @@ kable(venn_resumen,
                 full_width = FALSE)
 ```
 
-**Interpretación:** Un porcentaje alto de genes compartidos (intersección grande relativa al total) indica que los resultados son robustos e independientes del método de cuantificación. Los genes exclusivos de un solo alineador merecen mayor escrutinio: pueden ser falsos positivos de un método, o genes genuinamente difíciles de cuantificar (por ejemplo, genes con muchas isoformas donde Kallisto y STAR asignan las lecturas de forma diferente).
+**Interpretación:** De los 400 DEGs de Kallisto y 363 de STAR, 264 son compartidos (\~66% del total). Esto indica una concordancia sólida entre pipelines. Los 136 exclusivos de Kallisto y 99 de STAR probablemente corresponden a genes con múltiples isoformas o regiones de mapeo ambiguo donde pseudoalineamiento y alineamiento directo difieren en la asignación de lecturas.
 
-### 7.2 Concordancia de log2FC en genes compartidos
-
-```{r concordancia-lfc, fig.cap="Figura 13. Correlación de Pearson del log2FoldChange entre Kallisto y STAR para los genes DEG compartidos. La línea punteada es la diagonal perfecta (x = y). Puntos alejados de la diagonal representan genes donde los dos alineadores difieren en la magnitud del cambio.", fig.width=6, fig.height=5}
-lfc_k <- data.frame(gene = rownames(sig_kallisto),
-                    lfc_kallisto = sig_kallisto$log2FoldChange)
-lfc_s <- data.frame(gene = rownames(sig_star),
-                    lfc_star = sig_star$log2FoldChange)
-
-lfc_merge <- inner_join(lfc_k, lfc_s, by = "gene")
-
-cor_val <- round(cor(lfc_merge$lfc_kallisto, lfc_merge$lfc_star,
-                     method = "pearson"), 3)
-
-ggplot(lfc_merge, aes(x = lfc_kallisto, y = lfc_star)) +
-  geom_point(alpha = 0.5, color = "purple4", size = 1.5) +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
-  annotate("text",
-           x = min(lfc_merge$lfc_kallisto) * 0.8,
-           y = max(lfc_merge$lfc_star) * 0.9,
-           label = paste0("r = ", cor_val), size = 5) +
-  labs(title = "Concordancia de log2FC — genes compartidos",
-       x = "log2FC Kallisto", y = "log2FC STAR") +
-  theme_bw(base_size = 13) +
-  theme(plot.background = element_rect(fill = "white"))
-```
-
-**Interpretación:** Una correlación de Pearson r cercana a 1 y puntos alineados sobre la diagonal confirma que ambos alineadores no solo concuerdan en **cuáles** genes son DEG, sino también en la **dirección y magnitud** del cambio. Esto es la validación más sólida de los resultados: la firma transcriptómica del genotipo Dp16 es reproducible independientemente de la herramienta de cuantificación.
-
----
-
-## 8. Análisis Funcional — GO terms con gprofiler2
+## 8. Análisis Funcional y GO terms con gprofiler2
 
 El análisis funcional convierte una lista de genes en significado biológico. gprofiler2 implementa una prueba hipergeométrica que evalúa si la proporción de genes de una categoría GO/KEGG/REAC en nuestra lista de DEGs es **mayor de lo esperado por azar** dado el universo de todos los genes analizados. Usamos los genes **compartidos entre Kallisto y STAR** para maximizar la confiabilidad biológica.
 
@@ -706,6 +681,8 @@ cat("Genes down-regulated (compartidos):", length(down_genes), "\n")
 head(up_genes)
 head(down_genes)
 ```
+
+**Interpretación:** De los 264 genes compartidos entre alineadores, 113 están sobreexpresados en Dp16 respecto a WT y 151 están reprimidos, manteniendo el balance observado en el análisis completo (\~57% down, \~43% up). Los identificadores Ensembl fueron convertidos a formato sin versión (eliminando el sufijo numérico después del punto) para garantizar la compatibilidad con la base de datos de gprofiler2 para Mus musculus. Estas dos listas (genes up-regulated y down-regulated) se analizaron de forma independiente para identificar qué procesos biológicos se activan y cuáles se reprimen específicamente en el hígado del modelo Dp16.
 
 ### 8.2 Enriquecimiento con gprofiler2
 
@@ -734,6 +711,8 @@ cat("Queries:", paste(unique(multi_gp$result$query), collapse = ", "), "\n")
 cat("Términos enriquecidos totales:", nrow(multi_gp$result), "\n")
 ```
 
+**Interpretación:** El análisis con gprofiler2 identificó 720 términos enriquecidos en total entre genes up-regulated y down-regulated (FDR \< 0.05), distribuidos en cinco bases de datos: <GO:BP>, <GO:MF>, <GO:CC>, KEGG y REAC. El alto número de términos significativos refleja que los 264 genes compartidos, aunque representan una fracción pequeña del transcriptoma analizado, convergen en procesos biológicos bien definidos y estadísticamente sobre-representados en ambas direcciones de cambio.
+
 ### 8.3 Manhattan plot
 
 El manhattan plot de gprofiler2 muestra todos los términos enriquecidos organizados por base de datos (color) y ordenados en el eje X. El eje Y es el -log10(FDR): puntos más altos = más significativos. Es útil para tener una visión panorámica de qué bases de datos están más enriquecidas y dónde se concentran los términos significativos.
@@ -744,9 +723,9 @@ El manhattan plot de gprofiler2 muestra todos los términos enriquecidos organiz
 gostplot(multi_gp, interactive = FALSE)
 ```
 
-**Interpretación:** Grupos densos de puntos en una base de datos particular (por ejemplo, GO:BP) indican que múltiples procesos biológicos relacionados están enriquecidos, lo cual es más informativo que un solo término aislado. Puntos muy altos en el eje Y (FDR muy pequeño) representan los términos más sobre-representados.
+**Interpretación:** En los genes up-regulated, <GO:MF> presenta el término individual más significativo de todo el análisis (-log10 \~15), mientras que <GO:BP> concentra el mayor número de términos enriquecidos, varios de ellos superando el límite de \>16. KEGG y REAC también muestran señal notable, indicando que las rutas metabólicas activadas están anotadas en múltiples bases de datos. En los genes down-regulated, <GO:CC> es la categoría más significativa con un término que alcanza -log10 \~10, mientras que <GO:BP> tiene muchos términos pero de significancia moderada (\~2-4). KEGG y REAC tienen señal mínima en down-regulated, lo que indica que la represión inmune no converge en rutas metabólicas conocidas tan claramente como la activación.
 
-### 8.4 Top términos enriquecidos — Up-regulated
+### 8.4 Top términos enriquecidos y Up-regulated
 
 ```{r tabla-go-up}
 if (!is.null(multi_gp$result)) {
@@ -768,9 +747,9 @@ if (!is.null(multi_gp$result)) {
 }
 ```
 
-**Interpretación:** Los términos con FDR más pequeño y mayor overlap relativo (overlap / tamaño del término) son los más específicamente enriquecidos. Términos de GO:BP muy generales (como "metabolic process") con overlap grande son esperables pero poco informativos; los más específicos (por ejemplo "fatty acid beta-oxidation") son más relevantes biológicamente.
+**Interpretación:** Los genes activados en Dp16 se enriquecen de forma masiva en procesos metabólicos hepáticos. Los dos términos más significativos "small molecule metabolic process" y "lipid metabolic process" tienen FDR de 1.54e-23 y 7.01e-23 respectivamente, valores extremadamente por encima del esperado por azar. El patrón es coherente a lo largo de los 20 términos: metabolismo y síntesis de lípidos, ácidos grasos, ácidos orgánicos y esteroides forman un bloque funcional activado en conjunto. El término "catalytic activity" de <GO:MF> (FDR 1.16e-15) con 68 genes en overlap indica que gran parte de los genes activados codifican enzimas metabólicas. Esto es directamente concordante con lo reportado por Dunn et al. (2026), que identifica disfunción del metabolismo lipídico y de ácidos biliares como el fenotipo hepático principal del modelo Dp16.
 
-### 8.5 Top términos enriquecidos — Down-regulated
+### 8.5 Top términos enriquecidos y Down-regulated
 
 ```{r tabla-go-down}
 if (!is.null(multi_gp$result)) {
@@ -792,9 +771,11 @@ if (!is.null(multi_gp$result)) {
 }
 ```
 
-**Interpretación:** Los procesos biológicos down-regulated revelan qué funciones normales del hígado están **reducidas** en el modelo Dp16. Comparar estos términos con los up-regulated permite entender si hay un intercambio funcional (trade-off): por ejemplo, si el metabolismo lipídico está activado pero la respuesta inmune está reprimida.
+**Interpretación:** Los genes reprimidos en Dp16 muestran dos patrones distintos en la tabla. El término más significativo es "extracellular region" de <GO:CC> (FDR 5.80e-11, 44 genes en overlap), seguido de "extracellular space" y "membrane attack complex" lo que indica que los genes reprimidos codifican principalmente proteínas secretadas o de la matriz extracelular. El segundo patrón es inmune: "immune system process", "defense response", "immune response" y "response to stress" comparten el mismo FDR (4.06e-04), y la presencia de "Terminal pathway of complement" en REAC y "Complement and coagulation cascades" en KEGG apunta específicamente a la represión de la cascada del complemento en el hígado Dp16.
 
-### 8.6 Barplot GO:BP — Up-regulated
+Comparado con los términos up-regulated, los FDR son considerablemente menos extremos (máximo 5.80e-11 vs 1.54e-23), lo que indica que la señal metabólica activada es estadísticamente más robusta que la señal de represión. Esto es consistente con lo reportado por Dunn et al. (2026), que describe disfunción metabólica e inflamación como los fenotipos dominantes del hígado Dp16.
+
+### 8.6 Barplot <GO:BP> y Up-regulated
 
 ```{r barplot-go-up, fig.cap="Figura 15. Top 20 procesos biológicos (GO:BP) enriquecidos en genes up-regulated en Dp16 vs WT. El eje X muestra la significancia en escala -log10(FDR): barras más largas = mayor enriquecimiento.", fig.width=10, fig.height=6}
 if (!is.null(multi_gp$result)) {
@@ -820,9 +801,9 @@ if (!is.null(multi_gp$result)) {
 }
 ```
 
-**Interpretación:** Los procesos en la parte superior de la gráfica (barras más largas) son los más significativamente enriquecidos en los genes sobreexpresados en Dp16. Grupos de términos relacionados (por ejemplo, varios términos del metabolismo de ácidos grasos) sugieren que toda una vía biológica está activada, lo cual es biológicamente más convincente que un solo término aislado.
+**Interpretación:** Los 20 procesos <GO:BP> más enriquecidos en genes up-regulated forman un bloque funcional coherente centrado en el metabolismo hepático. Los seis términos más significativos metabolismo de pequeñas moléculas, lípidos, oxoácidos, ácidos orgánicos, ácidos carboxílicos y ácidos monocarboxílicos todos superan -log10(FDR) de 17, indicando una activación masiva y coordinada de la maquinaria metabólica. La presencia de "fatty acid metabolic process", "steroid metabolic process" y "acyl-CoA metabolic process" en los últimos puestos confirma que la activación no es de un solo proceso sino de toda la red metabólica hepática. Esto es directamente concordante con lo reportado por Dunn et al. (2026).
 
-### 8.7 Barplot GO:BP — Down-regulated
+### 8.7 Barplot <GO:BP> — Down-regulated
 
 ```{r barplot-go-down, fig.cap="Figura 16. Top 20 procesos biológicos (GO:BP) enriquecidos en genes down-regulated en Dp16 vs WT. Procesos represados en el modelo de trisomía, ordenados por significancia.", fig.width=10, fig.height=6}
 if (!is.null(multi_gp$result)) {
@@ -848,9 +829,9 @@ if (!is.null(multi_gp$result)) {
 }
 ```
 
-**Interpretación:** Los procesos GO:BP reprimidos en Dp16 indican qué funciones hepáticas normales están reducidas en el modelo de trisomía 16. La comparación entre las Figuras 15 y 16 permite construir una narrativa biológica completa: qué se activa, qué se reprime, y si hay una relación funcional entre ambos conjuntos de procesos.
+**Interpretación:** Los procesos <GO:BP> reprimidos en Dp16 se concentran en respuesta inmune y defensa. Los cuatro términos más significativos "response to stress", "immune system process", "immune response" y "defense response" comparten exactamente el mismo FDR (-log10 = 3.39), lo que indica que forman un bloque co-reprimido. La presencia de "complement activation" por vía clásica y alternativa, y "humoral immune response mediated by circulating immunoglobulin" apunta específicamente a la represión de la inmunidad humoral en el hígado Dp16. Comparando ambas figuras, la escala es muy diferente: el máximo en down-regulated es 3.39 vs 22.81 en up-regulated, lo que refleja que la activación metabólica es el fenotipo dominante y estadísticamente más robusto en el hígado Dp16.
 
----
+------------------------------------------------------------------------
 
 ## 9. Guardar resultados
 
@@ -890,26 +871,78 @@ save(dds, dds_star,
 cat("Todos los archivos guardados en:", outdir, "\n")
 ```
 
----
+------------------------------------------------------------------------
 
 ## 10. Conclusiones
 
-1. **Normalización exitosa:** La transformación VST produjo distribuciones de expresión comparables entre todas las muestras (Figura 1). El PCA separó claramente los genotipos WT y Dp16 (Figuras 2 y 4), confirmando que el genotipo es la principal fuente de variación en los datos y que no existe un batch effect evidente. El scree plot (Figura 3) indica qué fracción de la varianza total está capturada en los dos primeros componentes.
+1.  **Normalización exitosa:** La transformación VST produjo distribuciones de expresión comparables entre todas las muestras (Figura 1). El PCA separó claramente los genotipos WT y Dp16 (Figuras 2 y 4), confirmando que el genotipo es la principal fuente de variación en los datos y que no existe un batch effect evidente. El scree plot (Figura 3) indica qué fracción de la varianza total está capturada en los dos primeros componentes.
 
-2. **Expresión diferencial robusta:** Se identificaron genes significativos (padj < 0.05) con ambos alineadores. El shrinkage con `apeglm` estabilizó los log2FC de genes con baja expresión media, como se observa en los MA plots (Figuras 8 y 9): la contracción de puntos hacia log2FC = 0 en el extremo de baja expresión confirma que el shrinkage funcionó correctamente. Los heatmaps (Figuras 10 y 11) muestran patrones claros de sobreexpresión y subexpresión que separan ambos genotipos de forma no supervisada.
+2.  **Expresión diferencial robusta:** Se identificaron 400 DEGs con Kallisto y 363 con STAR (padj \< 0.05), con predominio de genes reprimidos (\~57% down) en ambos pipelines. El shrinkage con apeglm estabilizó los log2FC de genes con baja expresión, como se observa en los MA plots (Figuras 8 y 9). Los heatmaps (Figuras 10 y 11) muestran que los 20 genes más significativos son suficientes para separar ambos genotipos de forma no supervisada.
 
-3. **Alta concordancia Kallisto vs STAR:** El diagrama de Venn (Figura 12) y la correlación de log2FC (Figura 13) demuestran que la mayoría de los DEGs son compartidos entre ambos alineadores y que la magnitud del cambio es consistente. Esto valida que la firma transcriptómica del genotipo Dp16 es reproducible independientemente del método de cuantificación utilizado.
+3.  **Alta concordancia Kallisto vs STAR:** El diagrama de Venn (Figura 12) muestra que 264 genes son compartidos entre ambos pipelines (\~66% de Kallisto, \~73% de STAR), validando que la firma transcriptómica de Dp16 es reproducible independientemente del método de cuantificación.
 
-4. **Procesos biológicos alterados:** El análisis funcional con gprofiler2 identificó términos GO, rutas KEGG y vías REAC enriquecidos en los genes up-regulated y down-regulated de Dp16 vs WT (Figuras 14–16, Tablas 5–6). Los procesos enriquecidos son consistentes con las alteraciones en el metabolismo hepático reportadas por Dunn et al. 2026, incluyendo genes como *Apoa4*, *Papss2* y *Ces1g*.
+4.  **Procesos biológicos alterados:** El análisis funcional con gprofiler2 identificó 720 términos enriquecidos en los 264 genes compartidos. Los genes up-regulated se enriquecen masivamente en metabolismo de lípidos, ácidos grasos y ácidos orgánicos (FDR hasta 1.54e-23), mientras que los down-regulated se enriquecen en respuesta inmune y activación del complemento (FDR hasta 4.06e-04). Estos resultados son consistentes con la disfunción metabólica e inflamatoria hepática reportada por Dunn et al. (2026) en el modelo Dp16.
 
----
+------------------------------------------------------------------------
+
+## 11. Discusión
+
+### 11.1 Comparación con el artículo de referencia (Dunn et al., 2026)
+
+Nuestros resultados son consistentes con los hallazgos centrales reportados por Dunn et al. (2026) en el mismo modelo Dp(16)1Yey y el mismo tejido (hígado de ratón adulto). El artículo de referencia reporta disfunción metabólica hepática como fenotipo dominante en Dp16, caracterizada por alteración del metabolismo de ácidos biliares, fibrosis e inflamación. En nuestro análisis, los genes up-regulated en Dp16 se enriquecen masivamente en términos GO relacionados con metabolismo de lípidos, ácidos grasos y ácidos orgánicos (FDR hasta 1.54e-23), mientras que los down-regulated se concentran en respuesta inmune y cascada del complemento (FDR hasta 5.80e-11). Este patrón de activación metabólica combinada con represión de la inmunidad humoral replica la firma transcriptómica descrita por Dunn et al. (2026).
+
+Una diferencia notable es el número de DEGs detectados: nuestro análisis identificó 400 genes (Kallisto) y 363 (STAR) con padj < 0.05, mientras que Dunn et al. reportan \~1,500 DEGs con el dataset completo. Esta diferencia es atribuible directamente al menor poder estadístico de usar solo 3 réplicas por genotipo en lugar de las 6 disponibles. A pesar de ello, la dirección de los cambios y los procesos biológicos identificados son concordantes, lo que valida la robustez de nuestra aproximación analítica.
+
+### 11.2 Contexto biológico: metabolismo hepático y trisomía 16
+
+El perfil transcriptómico observado en el hígado Dp16 se puede interpretar en el contexto más amplio de la fisiopatología del Síndrome de Down. Tian et al. (2023) realizaron un análisis metabólico multi-tejido exhaustivo del modelo Dp16, incluyendo hígado, músculo esquelético y tejido adiposo, y demostraron que la trisomía genera resistencia a la insulina, intolerancia a la glucosa y dislipidemia en ambos sexos. Sus datos transcriptómicos multi-tejido muestran activación de vías del metabolismo lipídico y supresión de la función mitocondrial como patrones compartidos. Nuestros resultados en hígado son compatibles con este patrón sistémico: la activación masiva de genes del metabolismo de lípidos y ácidos grasos que observamos en Dp16 refleja esta disfunción metabólica sistémica. La concordancia entre el análisis de un solo tejido (nuestro estudio) y el análisis multi-tejido de Tian et al. (2023) sugiere que el hígado es uno de los principales efectores del fenotipo metabólico de la trisomía 16.
+
+### 11.3 Métodos de cuantificación: Kallisto vs STAR
+
+La comparación entre pipelines que realizamos tiene respaldo metodológico en el artículo fundacional de DESeq2 (Love et al., 2014), donde se enfatiza que la precisión del análisis diferencial depende críticamente de la calidad de las estimaciones de conteo. Nuestro análisis muestra que 264 de los DEGs son compartidos entre Kallisto y STAR (\~66–73% de overlap), lo que indica alta concordancia entre pseudoalineamiento y alineamiento directo al genoma para este dataset. La pequeña fracción de DEGs exclusivos de cada pipeline puede explicarse por las diferencias metodológicas: Kallisto trabaja a nivel de transcriptoma y propaga incertidumbre de asignación mediante bootstrap, mientras que STAR alinea al genoma completo y maneja lecturas multi-mapeo de forma diferente. Para el análisis de expresión diferencial en tejido hepático con genes bien anotados en GRCm39, ambas estrategias son equivalentes en términos prácticos, en línea con lo reportado por Love et al. (2014) sobre la robustez del modelo binomial negativo frente a distintas estrategias de cuantificación.
+
+### 11.4 Represión de la cascada del complemento en Dp16
+
+Un hallazgo particularmente relevante de nuestro análisis funcional es la represión de genes del complemento y la inmunidad humoral en el hígado Dp16. El hígado es el principal sitio de síntesis de proteínas del complemento, por lo que su represión en el contexto de Dp16 podría contribuir a la vulnerabilidad inmunológica observada clínicamente en personas con Síndrome de Down. Bray et al. (2016) demostraron que el pseudoalineamiento de Kallisto preserva la sensibilidad para detectar cambios en genes con expresión moderada-baja, que es precisamente el rango donde se ubican varios genes del complemento. Esto refuerza la confiabilidad de este hallazgo en nuestro análisis. El patrón de represión del complemento identificado aquí es consistente con lo reportado por Dunn et al. (2026) en sus análisis de enriquecimiento de vías, y sugiere que la disfunción hepática en trisomía 21 tiene consecuencias que van más allá del metabolismo y se extienden a la función inmune sistémica.
+
+### 11.5 Limitaciones del análisis y perspectivas futuras
+
+El principal factor limitante de este estudio es el tamaño de muestra (n=3 por genotipo), seleccionado por criterios de profundidad de secuenciación y porcentaje de duplicación a partir del dataset completo de 6 réplicas. Aunque el diseño estadístico de DESeq2 maneja adecuadamente réplicas triples cuando la señal biológica es fuerte (Love et al., 2014), el poder para detectar genes con cambios moderados (|log2FC| < 1) es reducido, lo que explica la diferencia en el número de DEGs respecto a Dunn et al. (2026). Adicionalmente, al ser análisis de bulk RNA-seq, no es posible distinguir qué tipos celulares específicos dentro del hígado contribuyen a cada cambio transcriptómico; este punto sería abordable con los datos de scRNA-seq del mismo bioproyecto. Finalmente, el análisis se realizó únicamente en ratones adultos de 19–26 semanas, por lo que los resultados no pueden extrapolarse directamente a otros estadios del desarrollo. Como perspectiva futura, incluir las 6 réplicas completas, integrar los datos de scRNA-seq disponibles en el mismo bioproyecto, y comparar el perfil transcriptómico hepático con el análisis multi-tejido de Tian et al. (2023) permitiría una caracterización más completa del fenotipo Dp16.
+
+------------------------------------------------------------------------
+
+## 12. Outlogs del pipeline
+
+Los archivos de log de cada paso del pipeline están disponibles en el repositorio en `scripts/out_logs/`. La tabla enlaza directamente a cada archivo:
+
+| Paso | Script | Outlogs |
+|------|--------|---------|
+| Descarga SRA | `01_download_adapters.sh` | [download.out](scripts/out_logs/download.out) · [download.err](scripts/out_logs/download.err) · [download_Dp16.out](scripts/out_logs/download_Dp16.out) · [download_Dp16.err](scripts/out_logs/download_Dp16.err) |
+| Trimmomatic | `trimmomatic_final.sh` | [trimm_final_1611.out](scripts/out_logs/trimm_final_1611.out) · [trimm_final_1611.err](scripts/out_logs/trimm_final_1611.err) |
+| Kallisto (×6 muestras) | `03_kallisto.sh` | [_0](scripts/out_logs/kallisto_1511_0.out) · [_1](scripts/out_logs/kallisto_1511_1.out) · [_2](scripts/out_logs/kallisto_1511_2.out) · [_3](scripts/out_logs/kallisto_1511_3.out) · [_4](scripts/out_logs/kallisto_1511_4.out) · [_5](scripts/out_logs/kallisto_1511_5.out) |
+| STAR index | `04_STAR_index.sh` | [STAR_index.out](scripts/out_logs/STAR_index.out) · [STAR_index.err](scripts/out_logs/STAR_index.err) |
+| STAR align (×6 muestras) | `05_STAR_align.sh` | [_0](scripts/out_logs/STAR_align_1520_0.out) · [_1](scripts/out_logs/STAR_align_1520_1.out) · [_2](scripts/out_logs/STAR_align_1520_2.out) · [_3](scripts/out_logs/STAR_align_1520_3.out) · [_4](scripts/out_logs/STAR_align_1520_4.out) · [_5](scripts/out_logs/STAR_align_1520_5.out) |
+
+------------------------------------------------------------------------
+
+## 13. Referencias
+
+1. Dunn, A. et al., 2026. Altered hepatic metabolism in Down syndrome. *Cell Reports*. DOI: [10.1016/j.celrep.2025.116835](https://doi.org/10.1016/j.celrep.2025.116835)
+
+2. Love, M.I., Huber, W., & Anders, S., 2014. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. *Genome Biology*, 15, 550. DOI: [10.1186/s13059-014-0550-8](https://doi.org/10.1186/s13059-014-0550-8)
+
+3. Tian, Y. et al., 2023. Gene dosage imbalance disrupts systemic metabolism in the Dp16 Down syndrome mouse model. *bioRxiv / eLife*. DOI: [10.64898/2026.01.13.699318](https://doi.org/10.64898/2026.01.13.699318)
+
+4. Bray, N.L., Pimentel, H., Melsted, P., & Pachter, L., 2016. Near-optimal probabilistic RNA-seq quantification. *Nature Biotechnology*, 34, 525–527. DOI: [10.1038/nbt.3519](https://doi.org/10.1038/nbt.3519)
+
+------------------------------------------------------------------------
 
 ```{r session-info}
 sessionInfo()
 ```
 
----
+------------------------------------------------------------------------
 
-*Documento generado con R Markdown.*  
-*Análisis realizado en el cluster `ken.lavis.unam.mx`*  
-*Ruta del proyecto: `/Users/dubsirubs/Desktop/RNAseq_Equipo4/` y `/mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/`*
+*Documento generado con R Markdown.*\
+*Análisis realizado en el cluster `ken.lavis.unam.mx`*\
+*Ruta del proyecto: `/mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/`*

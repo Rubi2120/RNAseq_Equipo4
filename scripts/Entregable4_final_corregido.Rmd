@@ -1,0 +1,915 @@
+---
+title: "Entregable 4: Normalización, Expresión Diferencial y Análisis Funcional"
+author: "Equipo 4 - Leonardo Ivan Anaya Gonzalez & Rubií Martínez Chavarría"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, dev = "png")
+.libPaths(c("~/R/library", .libPaths()))
+```
+
+---
+
+## Descripción del equipo
+
+- **Equipo:** Equipo 4
+- **Integrantes:**
+  - Leonardo Ivan Anaya Gonzalez (lanaya)
+  - Rubií Martínez Chavarría (rmartinez)
+- **Correos electrónicos:** leoianayaglz@gmail.com | rubimarch201@gmail.com
+
+---
+
+## Contexto
+
+Este entregable continúa a partir del Entregable 3, donde se realizó el control de calidad con FastQC/MultiQC, la eliminación de adaptadores con Trimmomatic, el pseudoalineamiento con **Kallisto** y el alineamiento con **STAR**, seguidos de la importación de datos en R mediante `tximport`. Los objetos `dds` (Kallisto) y `dds_star` (STAR) fueron construidos con DESeq2, filtrados (≥10 cuentas en ≥3 muestras) y con diseño `~ genotype` (referencia: WT).
+
+En este entregable realizamos:
+
+1. Normalización de cuentas (VST, z-score, melted counts)
+2. Análisis exploratorio de componentes principales (PCA) y corrección de batch effect
+3. Análisis de expresión diferencial con DESeq2 y shrinkage de log2FC
+4. Visualización: volcano, MA plot, heatmap
+5. Comparación Kallisto vs STAR
+6. Análisis funcional de términos GO con gprofiler2
+
+---
+
+## 0. Cargar paquetes
+
+```{r cargar-paquetes}
+library(DESeq2)        # Normalización y análisis de expresión diferencial
+library(tximport)      # Importar datos de Kallisto
+library(rhdf5)         # Leer archivos .h5 de Kallisto
+library(ggplot2)       # Visualización
+library(dplyr)         # Manipulación de datos
+library(reshape2)      # Conversión wide → long (melt)
+library(pheatmap)      # Heatmaps
+library(RColorBrewer)  # Paletas de colores
+library(knitr)         # Tablas en el documento
+library(kableExtra)    # Formato de tablas
+library(ggrepel)       # Etiquetas sin superposición
+library(gprofiler2)    # Análisis de enriquecimiento funcional
+library(VennDiagram)   # Diagramas de Venn
+library(grid)          # Para dibujar Venn
+library(limma)         # Corrección de batch effect
+library(apeglm)        # Prior para lfcShrink
+```
+
+---
+
+## 1. Cargar datos y reconstruir objetos DESeq2
+
+```{r reconstruir-objetos}
+# ── Rutas ─────────────────────────────────────────────────────────────────────
+ruta_kallisto <- "/Users/dubsirubs/Desktop/RNAseq_Equipo4/results_final/kallisto"
+star_dir      <- "/Users/dubsirubs/Desktop/RNAseq_Equipo4/results_final/STAR"
+outdir        <- "/Users/dubsirubs/Desktop/RNAseq_Equipo4/results_final/"
+figdir        <- "/Users/dubsirubs/Desktop/RNAseq_Equipo4/results_final/figures/"
+
+samples <- c("SRR33445252","SRR33445253","SRR33445254",
+             "SRR33445260","SRR33445261","SRR33445262")
+
+# ── Metadata ──────────────────────────────────────────────────────────────────
+metadata <- read.csv("/Users/dubsirubs/Desktop/RNAseq_Equipo4/metadata.csv")
+metadata$genotype <- factor(metadata$genotype, levels = c("WT", "Dp16"))
+rownames(metadata) <- metadata$sample
+
+# ── Kallisto → tximport → DESeq2 ──────────────────────────────────────────────
+archivos_h5 <- file.path(ruta_kallisto, samples, "abundance.h5")
+names(archivos_h5) <- samples
+
+tx2gene <- read.csv("/Users/dubsirubs/Desktop/RNAseq_Equipo4/results_final/tx2gene_kallisto.csv")
+
+txi.kallisto <- tximport(archivos_h5,
+                         type            = "kallisto",
+                         tx2gene         = tx2gene,
+                         txOut           = FALSE,
+                         ignoreTxVersion = FALSE,
+                         ignoreAfterBar  = TRUE)
+
+dds <- DESeqDataSetFromTximport(txi.kallisto,
+                                colData = metadata,
+                                design  = ~ genotype)
+# Filtro: genes con ≥10 cuentas en al menos 3 muestras
+keep <- rowSums(counts(dds) >= 10) >= 3
+dds  <- dds[keep, ]
+
+# ── STAR → DESeq2 ─────────────────────────────────────────────────────────────
+count_list  <- lapply(samples, function(s) {
+  f <- file.path(star_dir, s, paste0(s, ".ReadsPerGene.out.tab"))
+  read.table(f, skip = 4, header = FALSE)[, c(1, 2)]
+})
+counts_star <- do.call(cbind, lapply(count_list, function(x) x[, 2]))
+rownames(counts_star) <- count_list[[1]][, 1]
+colnames(counts_star) <- samples
+
+dds_star <- DESeqDataSetFromMatrix(countData = counts_star,
+                                   colData   = metadata,
+                                   design    = ~ genotype)
+keep_star <- rowSums(counts(dds_star) >= 10) >= 3
+dds_star  <- dds_star[keep_star, ]
+
+cat("Genes retenidos — Kallisto:", nrow(dds), "| STAR:", nrow(dds_star), "\n")
+```
+
+---
+
+## 2. Normalización de las cuentas
+
+Las cuentas crudas de RNA-seq no son comparables entre muestras porque dependen del tamaño total de la librería y, en el caso de Kallisto, también de la longitud de los transcritos. La **VST (Variance Stabilizing Transformation)** estabiliza la varianza a lo largo de todo el rango de expresión: los genes de baja expresión dejan de tener una varianza artificialmente alta, y los datos quedan en una escala apta para PCA, heatmaps y clustering. Se usa `blind = FALSE` porque conocemos el diseño experimental — esto permite que la transformación tome en cuenta el genotipo, lo cual es correcto cuando el objetivo es visualización comparativa.
+
+### 2.1 VST — Kallisto
+
+```{r vst-kallisto}
+vsd_kallisto <- vst(dds, blind = FALSE)
+cat("Dimensiones VST Kallisto (genes × muestras):", dim(vsd_kallisto), "\n")
+```
+
+### 2.2 VST — STAR
+
+```{r vst-star}
+vsd_star <- vst(dds_star, blind = FALSE)
+cat("Dimensiones VST STAR (genes × muestras):", dim(vsd_star), "\n")
+```
+
+### 2.3 Distribución de cuentas normalizadas
+
+El boxplot muestra la distribución de los valores VST por muestra. Si la normalización fue exitosa, las medianas de todas las cajas deben estar al mismo nivel, indicando que las muestras son comparables entre sí independientemente del tamaño de su librería.
+
+```{r melted-norm-counts, fig.cap="Figura 1. Distribución de cuentas normalizadas (VST, Kallisto) por muestra. Las medianas alineadas indican que la normalización fue exitosa y las muestras son comparables.", fig.width=8, fig.height=5}
+melted_norm_counts <- data.frame(melt(assay(vsd_kallisto)))
+colnames(melted_norm_counts) <- c("gene", "sample", "normalized_counts")
+
+melted_norm_counts <- left_join(
+  melted_norm_counts,
+  data.frame(sample = rownames(metadata), genotype = metadata$genotype),
+  by = "sample"
+)
+
+ggplot(melted_norm_counts,
+       aes(x = sample, y = normalized_counts, fill = genotype)) +
+  geom_boxplot(outlier.size = 0.3, alpha = 0.8) +
+  scale_fill_manual(values = c("WT" = "steelblue", "Dp16" = "firebrick3")) +
+  labs(title = "Distribución de cuentas normalizadas (VST) por muestra",
+       x = "Muestra", y = "Cuentas normalizadas (VST)", fill = "Genotipo") +
+  theme_bw(base_size = 12) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.background = element_rect(fill = "white"))
+```
+
+**Interpretación:** Cajas con medianas a niveles similares entre todas las muestras confirman que la normalización VST corrigió exitosamente las diferencias de tamaño de librería. Cualquier diferencia residual en la distribución refleja variación biológica real entre genotipos, no un sesgo técnico.
+
+### 2.4 Z-score
+
+El z-score estandariza cada gen a media = 0 y desviación estándar = 1 a través de todas las muestras. Esto elimina las diferencias de escala absoluta entre genes (algunos tienen expresión basalmente alta y otros baja) y resalta los patrones de expresión relativa, lo que facilita el clustering y la visualización en heatmaps. Se aplica `t(scale(t(x)))` porque `scale()` opera por columnas — al transponer dos veces, escalamos por filas (por gen).
+
+```{r zscore}
+counts_raw <- counts(dds)
+
+# Eliminar genes con varianza = 0 (misma expresión en todas las muestras)
+var_non_zero    <- apply(counts_raw, 1, var) != 0
+filtered_counts <- counts_raw[var_non_zero, ]
+
+# t(scale(t(x))): transponer → escalar por gen → transponer de vuelta
+zscores    <- t(scale(t(filtered_counts)))
+zscore_mat <- as.matrix(zscores)
+
+cat("Genes con varianza > 0:", nrow(zscore_mat), "\n")
+cat("Muestras:", ncol(zscore_mat), "\n")
+```
+
+---
+
+## 3. Análisis exploratorio: PCA
+
+El PCA reduce la dimensionalidad de los datos (miles de genes) a componentes que capturan la mayor variación. Su propósito es verificar que las muestras agrupan por la variable biológica de interés (genotipo) y no por variables técnicas (fecha, técnico, equipo de secuenciación), lo que indicaría un batch effect.
+
+### 3.1 PCA — Kallisto
+
+```{r pca-kallisto, fig.cap="Figura 2. PCA de muestras normalizadas con VST (Kallisto). Cada punto representa una muestra; el color indica el genotipo (azul = WT, rojo = Dp16). Las elipses muestran la dispersión de cada grupo.", fig.width=7, fig.height=5}
+mat_k <- assay(vsd_kallisto)
+pc_k  <- prcomp(t(mat_k))   # t() porque prcomp espera muestras en filas
+
+var_exp_k <- pc_k$sdev^2 / sum(pc_k$sdev^2) * 100
+
+pca_df_k <- data.frame(
+  PC1      = pc_k$x[, 1],
+  PC2      = pc_k$x[, 2],
+  genotype = metadata$genotype,
+  sample   = rownames(metadata)
+)
+
+ggplot(pca_df_k, aes(x = PC1, y = PC2, color = genotype, label = sample)) +
+  geom_point(size = 4) +
+  geom_text_repel(size = 3, show.legend = FALSE) +
+  stat_ellipse(aes(group = genotype), linetype = "dashed", level = 0.8) +
+  scale_color_manual(values = c("WT" = "steelblue", "Dp16" = "firebrick3")) +
+  labs(title = "PCA — Kallisto (VST)",
+       x     = sprintf("PC1 (%.1f%% varianza)", var_exp_k[1]),
+       y     = sprintf("PC2 (%.1f%% varianza)", var_exp_k[2]),
+       color = "Genotipo") +
+  theme_minimal(base_size = 13) +
+  theme(plot.background = element_rect(fill = "white"))
+```
+
+**Interpretación:** La separación de las muestras WT y Dp16 a lo largo de PC1 o PC2 confirma que el **genotipo es la principal fuente de variación** en los datos. Esto es la señal biológica esperada: el modelo de trisomía 16 (Dp16) produce una firma transcriptómica diferente a la del ratón silvestre. Si ambos genotipos se mezclaran sin patrón, indicaría que la variación técnica domina sobre la biológica.
+
+### 3.2 Scree Plot
+
+El scree plot muestra qué porcentaje de la varianza total captura cada componente principal. Es útil para saber cuántos PCs son informativos: un "codo" pronunciado indica que los primeros PCs concentran la mayor parte de la información.
+
+```{r scree-plot, fig.cap="Figura 3. Scree plot: porcentaje de varianza explicada por cada componente principal (Kallisto). Las etiquetas muestran los primeros cuatro componentes.", fig.width=7, fig.height=4}
+df_scree <- data.frame(
+  Componente = seq_along(var_exp_k),
+  Varianza   = var_exp_k,
+  Etiqueta   = paste0("PC", seq_along(var_exp_k), ": ",
+                      round(var_exp_k, 1), "%")
+)
+
+ggplot(df_scree, aes(x = Componente, y = Varianza)) +
+  geom_point(color = "steelblue", size = 3) +
+  geom_line(color = "steelblue") +
+  geom_text_repel(data = df_scree[1:4, ],
+                  aes(label = Etiqueta),
+                  size = 4, color = "darkred", fontface = "bold",
+                  box.padding = 0.4) +
+  labs(title = "Scree plot — varianza explicada por PCA (Kallisto)",
+       x = "Componente principal",
+       y = "% de varianza explicada") +
+  theme_minimal(base_size = 12) +
+  theme(plot.background = element_rect(fill = "white"))
+```
+
+**Interpretación:** Si PC1 y PC2 juntos explican una fracción grande de la varianza total (>50%), el gráfico de PCA de dos dimensiones es una representación fiel de la estructura global de los datos. Un scree plot con caída pronunciada en los primeros componentes indica que la variación está bien concentrada y los datos tienen una estructura clara.
+
+### 3.3 PCA — STAR
+
+```{r pca-star, fig.cap="Figura 4. PCA de muestras normalizadas con VST (STAR). Se esperan los mismos patrones de agrupamiento que en Kallisto si ambos alineadores son concordantes.", fig.width=7, fig.height=5}
+mat_s <- assay(vsd_star)
+pc_s  <- prcomp(t(mat_s))
+
+var_exp_s <- pc_s$sdev^2 / sum(pc_s$sdev^2) * 100
+
+pca_df_s <- data.frame(
+  PC1      = pc_s$x[, 1],
+  PC2      = pc_s$x[, 2],
+  genotype = metadata$genotype,
+  sample   = rownames(metadata)
+)
+
+ggplot(pca_df_s, aes(x = PC1, y = PC2, color = genotype, label = sample)) +
+  geom_point(size = 4) +
+  geom_text_repel(size = 3, show.legend = FALSE) +
+  stat_ellipse(aes(group = genotype), linetype = "dashed", level = 0.8) +
+  scale_color_manual(values = c("WT" = "steelblue", "Dp16" = "firebrick3")) +
+  labs(title = "PCA — STAR (VST)",
+       x     = sprintf("PC1 (%.1f%% varianza)", var_exp_s[1]),
+       y     = sprintf("PC2 (%.1f%% varianza)", var_exp_s[2]),
+       color = "Genotipo") +
+  theme_minimal(base_size = 13) +
+  theme(plot.background = element_rect(fill = "white"))
+```
+
+**Interpretación:** La concordancia entre el PCA de Kallisto y el de STAR valida que el agrupamiento por genotipo no es un artefacto del método de cuantificación, sino una señal biológica real. Diferencias menores entre ambos PCAs son esperables dado que Kallisto realiza pseudoalineamiento probabilístico mientras que STAR realiza alineamiento directo al genoma.
+
+### 3.4 Corrección de batch effect
+
+Aunque no tenemos un batch effect conocido en este experimento, aplicamos `limma::removeBatchEffect` como buena práctica para visualización. El argumento `design` protege la señal biológica del genotipo durante la corrección: la función solo elimina la variación que **no** está explicada por el genotipo.
+
+> **Nota importante:** Esta corrección es **únicamente para visualización** (PCA y heatmaps). El análisis diferencial con DESeq2 siempre se corre sobre los datos originales sin corregir; si hubiera un batch real, se incluiría como covariable en la fórmula de diseño (`~ batch + genotype`).
+
+```{r batch-correction, fig.cap="Figura 5. PCA post-corrección de batch effect (Kallisto VST). Sin batch conocido, la corrección elimina solo la variación residual no explicada por el genotipo, lo que generalmente refuerza la separación entre grupos.", fig.width=7, fig.height=5}
+vsd_bc    <- vsd_kallisto   # copia para no modificar el original
+mm_design <- model.matrix(~ genotype, colData(vsd_bc))
+mat_bc    <- assay(vsd_bc)
+mat_bc    <- removeBatchEffect(mat_bc, design = mm_design)
+assay(vsd_bc) <- mat_bc
+
+pcaData_bc    <- plotPCA(vsd_bc, intgroup = "genotype", returnData = TRUE)
+percentVar_bc <- round(100 * attr(pcaData_bc, "percentVar"))
+
+ggplot(pcaData_bc, aes(PC1, PC2, color = genotype, label = name)) +
+  geom_point(size = 4) +
+  geom_text_repel(size = 3, show.legend = FALSE) +
+  scale_color_manual(values = c("WT" = "steelblue", "Dp16" = "firebrick3")) +
+  labs(title = "PCA post-corrección de batch (Kallisto VST)",
+       x = paste0("PC1: ", percentVar_bc[1], "% varianza"),
+       y = paste0("PC2: ", percentVar_bc[2], "% varianza"),
+       color = "Genotipo") +
+  theme_minimal(base_size = 13) +
+  theme(plot.background = element_rect(fill = "white"))
+```
+
+**Interpretación:** Si la separación entre WT y Dp16 se mantiene o mejora tras la corrección, confirma que la variación biológica debida al genotipo es sólida y no dependía de efectos técnicos. Si el patrón cambia drásticamente, indicaría que parte de la separación original era de origen técnico.
+
+---
+
+## 4. Análisis de Expresión Diferencial (DESeq2)
+
+DESeq2 modela las cuentas con una distribución binomial negativa que captura la sobredispersión típica de RNA-seq. El análisis realiza tres pasos: (1) estimación de **factores de tamaño** para corregir diferencias en el total de lecturas, (2) estimación de la **dispersión** gen a gen, y (3) ajuste del modelo lineal generalizado y prueba de Wald para obtener log2FC y p-values.
+
+### 4.1 DESeq2 — Kallisto
+
+```{r deseq2-kallisto}
+# relevel: WT como referencia para que todos los FC se interpreten como "Dp16 vs WT"
+dds$genotype <- relevel(dds$genotype, ref = "WT")
+dds <- DESeq(dds)
+resultsNames(dds)
+```
+
+```{r resultados-kallisto}
+res_kallisto <- results(dds,
+                        contrast = c("genotype", "Dp16", "WT"),
+                        alpha    = 0.05)
+summary(res_kallisto)
+```
+
+### 4.2 Shrinkage de log2FC — Kallisto
+
+Genes con baja expresión o pocas réplicas pueden presentar log2FC muy grandes e inestables, no porque realmente cambien mucho, sino porque hay poca información para estimarlos. El shrinkage con **apeglm** aplica un prior adaptativo que "contrae" esos valores extremos hacia 0, sin modificar los p-values ni el número de genes significativos. El resultado son estimaciones de FC más confiables biológicamente y visualizaciones más limpias.
+
+```{r lfc-shrink-kallisto}
+# coef debe coincidir exactamente con un nombre de resultsNames(dds)
+res_kallisto_shrink <- lfcShrink(dds,
+                                 coef = "genotype_Dp16_vs_WT",
+                                 type = "apeglm")
+summary(res_kallisto_shrink)
+```
+
+### 4.3 DESeq2 — STAR
+
+```{r deseq2-star}
+dds_star$genotype <- relevel(dds_star$genotype, ref = "WT")
+dds_star <- DESeq(dds_star)
+resultsNames(dds_star)
+```
+
+```{r resultados-star}
+res_star <- results(dds_star,
+                    contrast = c("genotype", "Dp16", "WT"),
+                    alpha    = 0.05)
+summary(res_star)
+```
+
+```{r lfc-shrink-star}
+res_star_shrink <- lfcShrink(dds_star,
+                              coef = "genotype_Dp16_vs_WT",
+                              type = "apeglm")
+summary(res_star_shrink)
+```
+
+### 4.4 Tabla comparativa de DEGs
+
+```{r tabla-comparativa}
+sig_kallisto <- as.data.frame(res_kallisto_shrink) %>%
+  filter(!is.na(padj) & padj < 0.05)
+
+sig_star <- as.data.frame(res_star_shrink) %>%
+  filter(!is.na(padj) & padj < 0.05)
+
+resumen <- data.frame(
+  Alineador      = c("Kallisto", "STAR"),
+  Genes_totales  = c(nrow(dds), nrow(dds_star)),
+  DEGs_total     = c(nrow(sig_kallisto), nrow(sig_star)),
+  Up_regulated   = c(sum(sig_kallisto$log2FoldChange > 0),
+                     sum(sig_star$log2FoldChange > 0)),
+  Down_regulated = c(sum(sig_kallisto$log2FoldChange < 0),
+                     sum(sig_star$log2FoldChange < 0))
+)
+
+kable(resumen,
+      col.names = c("Alineador", "Genes totales", "DEGs (padj<0.05)",
+                    "Up-regulated", "Down-regulated"),
+      caption = "Tabla 1. Resumen de genes diferencialmente expresados por alineador (Dp16 vs WT, padj < 0.05).") %>%
+  kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                full_width = FALSE)
+```
+
+**Interpretación:** Un número similar de DEGs entre Kallisto y STAR indica concordancia entre los dos métodos de cuantificación. Diferencias grandes en el total pueden reflejar que un alineador es más conservador que el otro, o que genes multi-mapeo son tratados de forma diferente. La columna de up/down-regulated muestra el balance de la respuesta transcriptómica: si predominan los genes up-regulated, el genotipo Dp16 activa más procesos de los que reprime.
+
+---
+
+## 5. Top genes más significativos
+
+### Top 20 DEGs — Kallisto
+
+```{r top20-kallisto}
+top20_k <- sig_kallisto %>%
+  arrange(padj) %>%
+  head(20) %>%
+  select(baseMean, log2FoldChange, lfcSE, pvalue, padj) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 4)))
+
+kable(top20_k,
+      col.names = c("Expr. media", "log2FC", "SE", "p-value", "p-adj"),
+      caption = "Tabla 2. Top 20 genes más significativos — Kallisto (Dp16 vs WT, padj < 0.05). Los genes están ordenados por p-value ajustado de menor a mayor.") %>%
+  kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                full_width = FALSE)
+```
+
+### Top 20 DEGs — STAR
+
+```{r top20-star}
+top20_s <- sig_star %>%
+  arrange(padj) %>%
+  head(20) %>%
+  select(baseMean, log2FoldChange, lfcSE, pvalue, padj) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 4)))
+
+kable(top20_s,
+      col.names = c("Expr. media", "log2FC", "SE", "p-value", "p-adj"),
+      caption = "Tabla 3. Top 20 genes más significativos — STAR (Dp16 vs WT, padj < 0.05). Los genes están ordenados por p-value ajustado de menor a mayor.") %>%
+  kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                full_width = FALSE)
+```
+
+**Interpretación de las tablas:** `baseMean` es la expresión promedio del gen en todas las muestras (a mayor baseMean, más abundante es el transcrito). `log2FoldChange` indica la dirección y magnitud del cambio en Dp16 respecto a WT: un valor positivo significa que el gen está más expresado en Dp16, negativo que está menos expresado. `lfcSE` es el error estándar del FC después del shrinkage. El `padj` es el p-value corregido por el método de Benjamini-Hochberg para controlar la tasa de falsos positivos.
+
+---
+
+## 6. Visualización de resultados
+
+### 6.1 Volcano Plot — Kallisto
+
+El volcano plot enfrenta la magnitud del cambio (`log2FC`, eje X) contra la significancia estadística (`-log10(padj)`, eje Y). Los genes biológicamente más relevantes se encuentran en las esquinas superiores: alto FC y muy significativos. Las líneas discontinuas marcan los umbrales de corte: |log2FC| > 1 (cambio de al menos 2 veces) y padj < 0.05.
+
+```{r volcano-kallisto, fig.cap="Figura 6. Volcano plot — Kallisto (Dp16 vs WT). Rojo: genes up-regulated en Dp16 (log2FC > 1, padj < 0.05). Azul: genes down-regulated (log2FC < -1, padj < 0.05). Gris: sin cambio significativo. Las etiquetas corresponden a los 10 genes con menor padj.", fig.width=8, fig.height=6}
+df_k <- as.data.frame(res_kallisto_shrink) %>%
+  mutate(
+    gene       = rownames(.),
+    Expression = case_when(
+      log2FoldChange >= 1  & padj < 0.05 ~ "Up-regulated",
+      log2FoldChange <= -1 & padj < 0.05 ~ "Down-regulated",
+      TRUE ~ "Unchanged"
+    )
+  )
+
+top_labels_k <- df_k %>%
+  filter(Expression != "Unchanged") %>%
+  arrange(padj) %>%
+  head(10)
+
+ggplot(df_k, aes(x = log2FoldChange, y = -log10(padj))) +
+  geom_point(aes(color = Expression), size = 0.8, alpha = 0.7) +
+  geom_text_repel(data = top_labels_k, aes(label = gene),
+                  size = 2.8, max.overlaps = 15, show.legend = FALSE) +
+  scale_color_manual(values = c("Up-regulated"   = "firebrick3",
+                                "Down-regulated" = "dodgerblue3",
+                                "Unchanged"      = "gray70")) +
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed", alpha = 0.5) +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", alpha = 0.5) +
+  labs(title = "Volcano Plot — Kallisto (Dp16 vs WT)",
+       x     = expression("log"[2]*"FC (shrinkage apeglm)"),
+       y     = expression("-log"[10]*"padj"),
+       color = "Expresión") +
+  theme_bw(base_size = 13) +
+  theme(plot.background = element_rect(fill = "white"))
+```
+
+**Interpretación:** Los genes en la esquina superior derecha están sobreexpresados en Dp16 con alta significancia; los de la esquina superior izquierda están subexpresados. Una nube de puntos dispersa sin estructura indica baja señal biológica; puntos concentrados en las esquinas superiores indican una respuesta transcriptómica fuerte y específica al genotipo. El shrinkage hace que los genes con baja expresión (que tienden a tener FC grandes por ruido) ya no dominen la gráfica.
+
+### 6.2 Volcano Plot — STAR
+
+```{r volcano-star, fig.cap="Figura 7. Volcano plot — STAR (Dp16 vs WT). Mismos criterios de corte que Kallisto (|log2FC| > 1, padj < 0.05). La comparación visual entre ambos volcano plots permite evaluar la concordancia entre alineadores.", fig.width=8, fig.height=6}
+df_s <- as.data.frame(res_star_shrink) %>%
+  mutate(
+    gene       = rownames(.),
+    Expression = case_when(
+      log2FoldChange >= 1  & padj < 0.05 ~ "Up-regulated",
+      log2FoldChange <= -1 & padj < 0.05 ~ "Down-regulated",
+      TRUE ~ "Unchanged"
+    )
+  )
+
+top_labels_s <- df_s %>%
+  filter(Expression != "Unchanged") %>%
+  arrange(padj) %>%
+  head(10)
+
+ggplot(df_s, aes(x = log2FoldChange, y = -log10(padj))) +
+  geom_point(aes(color = Expression), size = 0.8, alpha = 0.7) +
+  geom_text_repel(data = top_labels_s, aes(label = gene),
+                  size = 2.8, max.overlaps = 15, show.legend = FALSE) +
+  scale_color_manual(values = c("Up-regulated"   = "firebrick3",
+                                "Down-regulated" = "dodgerblue3",
+                                "Unchanged"      = "gray70")) +
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed", alpha = 0.5) +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", alpha = 0.5) +
+  labs(title = "Volcano Plot — STAR (Dp16 vs WT)",
+       x     = expression("log"[2]*"FC (shrinkage apeglm)"),
+       y     = expression("-log"[10]*"padj"),
+       color = "Expresión") +
+  theme_bw(base_size = 13) +
+  theme(plot.background = element_rect(fill = "white"))
+```
+
+**Interpretación:** Si los genes más significativos etiquetados en el volcano de STAR coinciden con los del volcano de Kallisto, la concordancia entre alineadores es alta. Si aparecen genes distintos en las esquinas, puede indicar que esos genes tienen lecturas ambiguas que Kallisto y STAR manejan de forma diferente (por ejemplo, genes con múltiples isoformas o regiones repetidas).
+
+### 6.3 MA Plot — Kallisto
+
+El MA plot muestra la relación entre la expresión media (`baseMean`, eje X en log2) y el log2FC (eje Y). Es una herramienta diagnóstica: en datos bien normalizados, los puntos grises (no significativos) deben estar centrados en log2FC = 0 a lo largo de todo el rango de expresión. El efecto del shrinkage es claramente visible: los genes con baja expresión media (izquierda del eje X) tienen FC contraídos hacia 0, mientras que los genes con alta expresión mantienen sus FC originales.
+
+```{r maplot-kallisto, fig.cap="Figura 8. MA plot — Kallisto (shrinkage apeglm). Azul: genes significativos (padj < 0.05). Gris: no significativos. La línea horizontal en log2FC = 0 sirve de referencia: puntos equilibrados sobre y bajo la línea indican ausencia de sesgo sistemático.", fig.width=7, fig.height=5}
+ma_k <- as.data.frame(res_kallisto_shrink) %>%
+  mutate(
+    significant  = !is.na(padj) & padj < 0.05,
+    baseMean_log = log2(baseMean + 1)
+  )
+
+ggplot(ma_k, aes(x = baseMean_log, y = log2FoldChange, color = significant)) +
+  geom_point(size = 0.6, alpha = 0.6) +
+  scale_color_manual(values = c("FALSE" = "gray70", "TRUE" = "steelblue"),
+                     labels = c("No significativo", "padj < 0.05")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  labs(title = "MA Plot — Kallisto (shrinkage apeglm)",
+       x     = expression("log"[2]*"(expresión media + 1)"),
+       y     = expression("log"[2]*"FC"),
+       color = "") +
+  theme_bw(base_size = 13) +
+  theme(plot.background = element_rect(fill = "white"))
+```
+
+**Interpretación:** La "compresión" de puntos grises hacia log2FC = 0 en el extremo izquierdo del eje X (genes de baja expresión) es precisamente el efecto del shrinkage apeglm. Los puntos azules (DEGs) a la derecha del eje X corresponden a genes con expresión media alta y FC estables — estos son los candidatos más confiables biológicamente. Un sesgo visible hacia arriba o abajo de la línea horizontal indicaría un problema de normalización.
+
+### 6.4 MA Plot — STAR
+
+```{r maplot-star, fig.cap="Figura 9. MA plot — STAR (shrinkage apeglm). Se esperan patrones similares a Kallisto. Diferencias en la densidad de puntos azules reflejan variaciones en el número de DEGs detectados por cada alineador.", fig.width=7, fig.height=5}
+ma_s <- as.data.frame(res_star_shrink) %>%
+  mutate(
+    significant  = !is.na(padj) & padj < 0.05,
+    baseMean_log = log2(baseMean + 1)
+  )
+
+ggplot(ma_s, aes(x = baseMean_log, y = log2FoldChange, color = significant)) +
+  geom_point(size = 0.6, alpha = 0.6) +
+  scale_color_manual(values = c("FALSE" = "gray70", "TRUE" = "steelblue"),
+                     labels = c("No significativo", "padj < 0.05")) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  labs(title = "MA Plot — STAR (shrinkage apeglm)",
+       x     = expression("log"[2]*"(expresión media + 1)"),
+       y     = expression("log"[2]*"FC"),
+       color = "") +
+  theme_bw(base_size = 13) +
+  theme(plot.background = element_rect(fill = "white"))
+```
+
+### 6.5 Heatmap — Top 20 DEGs (Kallisto)
+
+El heatmap visualiza los patrones de expresión de los 20 genes con menor padj. Cada fila es un gen, cada columna es una muestra. Los colores representan la expresión estandarizada por fila (z-score dentro del heatmap): rojo = expresión alta relativa, azul = expresión baja relativa. El clustering jerárquico de filas y columnas se realiza de forma no supervisada — si las muestras del mismo genotipo se agrupan juntas, significa que los genes seleccionados realmente distinguen WT de Dp16.
+
+```{r heatmap-kallisto, fig.cap="Figura 10. Heatmap de los 20 genes con menor padj — Kallisto (VST, escalado por fila/z-score). La barra de color en la parte superior indica el genotipo de cada muestra. El clustering jerárquico es no supervisado.", fig.width=8, fig.height=7}
+top_genes_k <- head(order(res_kallisto$padj, na.last = TRUE), 20)
+mat_heat_k  <- assay(vsd_kallisto)[top_genes_k, ]
+
+ann_col    <- data.frame(Genotipo = metadata$genotype)
+rownames(ann_col) <- rownames(metadata)
+ann_colors <- list(Genotipo = c("WT" = "steelblue", "Dp16" = "firebrick3"))
+
+pheatmap(mat_heat_k,
+         cluster_rows      = TRUE,
+         cluster_cols      = TRUE,
+         show_rownames     = TRUE,
+         show_colnames     = TRUE,
+         annotation_col    = ann_col,
+         annotation_colors = ann_colors,
+         scale             = "row",
+         color             = colorRampPalette(rev(brewer.pal(9, "RdBu")))(100),
+         fontsize_row      = 9,
+         main              = "Top 20 DEGs — Kallisto (escala por fila)")
+```
+
+**Interpretación:** Si las columnas WT y Dp16 se agrupan por separado en el dendrograma superior (sin que nosotros lo indiquemos), confirma que los 20 genes más significativos son suficientes para distinguir ambos genotipos. Genes que aparecen en rojo en Dp16 y azul en WT están sobreexpresados en el modelo de trisomía; los que aparecen al revés están subexpresados. Bloques de genes con patrones similares (en el dendrograma lateral) podrían estar co-regulados o pertenecer a la misma vía biológica.
+
+### 6.6 Heatmap — Top 20 DEGs (STAR)
+
+```{r heatmap-star, fig.cap="Figura 11. Heatmap de los 20 genes con menor padj — STAR (VST, escalado por fila). La comparación con el heatmap de Kallisto (Figura 10) permite identificar genes consistentemente significativos en ambos alineadores.", fig.width=8, fig.height=7}
+top_genes_s <- head(order(res_star$padj, na.last = TRUE), 20)
+mat_heat_s  <- assay(vsd_star)[top_genes_s, ]
+
+pheatmap(mat_heat_s,
+         cluster_rows      = TRUE,
+         cluster_cols      = TRUE,
+         show_rownames     = TRUE,
+         show_colnames     = TRUE,
+         annotation_col    = ann_col,
+         annotation_colors = ann_colors,
+         scale             = "row",
+         color             = colorRampPalette(rev(brewer.pal(9, "RdBu")))(100),
+         fontsize_row      = 9,
+         main              = "Top 20 DEGs — STAR (escala por fila)")
+```
+
+**Interpretación:** Genes que aparecen en el top 20 de ambos alineadores con el mismo patrón de color son los candidatos más robustos del análisis. Genes exclusivos de uno de los dos heatmaps merecen una revisión adicional (por ejemplo, si son genes con múltiples isoformas o con lecturas ambiguas).
+
+---
+
+## 7. Comparación Kallisto vs STAR
+
+### 7.1 Genes compartidos y exclusivos
+
+```{r venn-diagram, fig.cap="Figura 12. Diagrama de Venn: DEGs compartidos entre Kallisto y STAR (padj < 0.05). El área de intersección representa genes detectados como diferencialmente expresados por ambos alineadores.", fig.width=6, fig.height=5}
+genes_kallisto <- rownames(sig_kallisto)
+genes_star     <- rownames(sig_star)
+
+genes_comunes <- intersect(genes_kallisto, genes_star)
+genes_solo_k  <- setdiff(genes_kallisto, genes_star)
+genes_solo_s  <- setdiff(genes_star, genes_kallisto)
+
+venn.plot <- draw.pairwise.venn(
+  area1      = length(genes_kallisto),
+  area2      = length(genes_star),
+  cross.area = length(genes_comunes),
+  category   = c("Kallisto", "STAR"),
+  fill       = c("steelblue", "firebrick3"),
+  alpha      = 0.4,
+  col        = "white",
+  cex        = 1.5,
+  cat.cex    = 1.3,
+  cat.pos    = c(-20, 20),
+  cat.dist   = 0.07
+)
+grid.draw(venn.plot)
+```
+
+```{r tabla-venn}
+venn_resumen <- data.frame(
+  Categoría = c("Solo Kallisto", "Compartidos", "Solo STAR"),
+  N_genes   = c(length(genes_solo_k), length(genes_comunes), length(genes_solo_s))
+)
+
+kable(venn_resumen,
+      caption = "Tabla 4. Distribución de DEGs entre alineadores (padj < 0.05).") %>%
+  kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                full_width = FALSE)
+```
+
+**Interpretación:** Un porcentaje alto de genes compartidos (intersección grande relativa al total) indica que los resultados son robustos e independientes del método de cuantificación. Los genes exclusivos de un solo alineador merecen mayor escrutinio: pueden ser falsos positivos de un método, o genes genuinamente difíciles de cuantificar (por ejemplo, genes con muchas isoformas donde Kallisto y STAR asignan las lecturas de forma diferente).
+
+### 7.2 Concordancia de log2FC en genes compartidos
+
+```{r concordancia-lfc, fig.cap="Figura 13. Correlación de Pearson del log2FoldChange entre Kallisto y STAR para los genes DEG compartidos. La línea punteada es la diagonal perfecta (x = y). Puntos alejados de la diagonal representan genes donde los dos alineadores difieren en la magnitud del cambio.", fig.width=6, fig.height=5}
+lfc_k <- data.frame(gene = rownames(sig_kallisto),
+                    lfc_kallisto = sig_kallisto$log2FoldChange)
+lfc_s <- data.frame(gene = rownames(sig_star),
+                    lfc_star = sig_star$log2FoldChange)
+
+lfc_merge <- inner_join(lfc_k, lfc_s, by = "gene")
+
+cor_val <- round(cor(lfc_merge$lfc_kallisto, lfc_merge$lfc_star,
+                     method = "pearson"), 3)
+
+ggplot(lfc_merge, aes(x = lfc_kallisto, y = lfc_star)) +
+  geom_point(alpha = 0.5, color = "purple4", size = 1.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  annotate("text",
+           x = min(lfc_merge$lfc_kallisto) * 0.8,
+           y = max(lfc_merge$lfc_star) * 0.9,
+           label = paste0("r = ", cor_val), size = 5) +
+  labs(title = "Concordancia de log2FC — genes compartidos",
+       x = "log2FC Kallisto", y = "log2FC STAR") +
+  theme_bw(base_size = 13) +
+  theme(plot.background = element_rect(fill = "white"))
+```
+
+**Interpretación:** Una correlación de Pearson r cercana a 1 y puntos alineados sobre la diagonal confirma que ambos alineadores no solo concuerdan en **cuáles** genes son DEG, sino también en la **dirección y magnitud** del cambio. Esto es la validación más sólida de los resultados: la firma transcriptómica del genotipo Dp16 es reproducible independientemente de la herramienta de cuantificación.
+
+---
+
+## 8. Análisis Funcional — GO terms con gprofiler2
+
+El análisis funcional convierte una lista de genes en significado biológico. gprofiler2 implementa una prueba hipergeométrica que evalúa si la proporción de genes de una categoría GO/KEGG/REAC en nuestra lista de DEGs es **mayor de lo esperado por azar** dado el universo de todos los genes analizados. Usamos los genes **compartidos entre Kallisto y STAR** para maximizar la confiabilidad biológica.
+
+### 8.1 Preparar listas de genes
+
+```{r listas-genes}
+# Genes compartidos entre alineadores, clasificados por dirección del cambio
+up_genes   <- genes_comunes[sig_kallisto[genes_comunes, "log2FoldChange"] > 0]
+down_genes <- genes_comunes[sig_kallisto[genes_comunes, "log2FoldChange"] < 0]
+
+up_genes   <- up_genes[!is.na(up_genes)]
+down_genes <- down_genes[!is.na(down_genes)]
+
+# Remover número de versión de IDs Ensembl (ENSMUSG00000001234.5 → ENSMUSG00000001234)
+up_genes   <- gsub("\\..*", "", up_genes)
+down_genes <- gsub("\\..*", "", down_genes)
+
+cat("Genes up-regulated (compartidos):", length(up_genes), "\n")
+cat("Genes down-regulated (compartidos):", length(down_genes), "\n")
+head(up_genes)
+head(down_genes)
+```
+
+### 8.2 Enriquecimiento con gprofiler2
+
+```{r gprofiler2}
+sources_db <- c("GO:BP", "GO:MF", "GO:CC", "KEGG", "REAC")
+
+# multi_query = FALSE: devuelve una fila por término por query,
+# con columnas normales: query, p_value, intersection_size, source, term_name.
+# Con multi_query = TRUE esas columnas son listas y causan errores al filtrar.
+multi_gp <- gost(
+  query = list(
+    "Up-regulated"   = up_genes,
+    "Down-regulated" = down_genes
+  ),
+  organism          = "mmusculus",
+  correction_method = "fdr",
+  user_threshold    = 0.05,
+  multi_query       = FALSE,
+  ordered_query     = FALSE,
+  sources           = sources_db,
+  evcodes           = TRUE
+)
+
+cat("Columnas del resultado:", paste(colnames(multi_gp$result), collapse = ", "), "\n")
+cat("Queries:", paste(unique(multi_gp$result$query), collapse = ", "), "\n")
+cat("Términos enriquecidos totales:", nrow(multi_gp$result), "\n")
+```
+
+### 8.3 Manhattan plot
+
+El manhattan plot de gprofiler2 muestra todos los términos enriquecidos organizados por base de datos (color) y ordenados en el eje X. El eje Y es el -log10(FDR): puntos más altos = más significativos. Es útil para tener una visión panorámica de qué bases de datos están más enriquecidas y dónde se concentran los términos significativos.
+
+```{r manhattan, fig.cap="Figura 14. Manhattan plot de términos GO (BP, MF, CC), KEGG y REAC enriquecidos en los genes DEG compartidos (FDR < 0.05). Cada color representa una base de datos diferente.", fig.width=10, fig.height=5}
+# gostplot() es la función nativa de gprofiler2 para este tipo de gráfico.
+# Es la más robusta porque maneja internamente la estructura del objeto multi_gp.
+gostplot(multi_gp, interactive = FALSE)
+```
+
+**Interpretación:** Grupos densos de puntos en una base de datos particular (por ejemplo, GO:BP) indican que múltiples procesos biológicos relacionados están enriquecidos, lo cual es más informativo que un solo término aislado. Puntos muy altos en el eje Y (FDR muy pequeño) representan los términos más sobre-representados.
+
+### 8.4 Top términos enriquecidos — Up-regulated
+
+```{r tabla-go-up}
+if (!is.null(multi_gp$result)) {
+  gost_df <- as.data.frame(multi_gp$result)
+
+  bar_up <- gost_df %>%
+    filter(query == "Up-regulated") %>%
+    arrange(p_value) %>%
+    head(20) %>%
+    select(term_name, source, term_size, intersection_size, p_value) %>%
+    mutate(p_value = formatC(p_value, format = "e", digits = 2))
+
+  kable(bar_up,
+        col.names = c("Término GO", "Base de datos", "Tamaño del término",
+                      "Genes en overlap", "p-value (FDR)"),
+        caption = "Tabla 5. Top 20 términos enriquecidos en genes up-regulated en Dp16 vs WT. 'Tamaño del término' indica cuántos genes del genoma pertenecen a esa categoría; 'Genes en overlap' es cuántos de nuestros DEGs caen en ella.") %>%
+    kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                  full_width = FALSE)
+}
+```
+
+**Interpretación:** Los términos con FDR más pequeño y mayor overlap relativo (overlap / tamaño del término) son los más específicamente enriquecidos. Términos de GO:BP muy generales (como "metabolic process") con overlap grande son esperables pero poco informativos; los más específicos (por ejemplo "fatty acid beta-oxidation") son más relevantes biológicamente.
+
+### 8.5 Top términos enriquecidos — Down-regulated
+
+```{r tabla-go-down}
+if (!is.null(multi_gp$result)) {
+  gost_df <- as.data.frame(multi_gp$result)
+
+  bar_down <- gost_df %>%
+    filter(query == "Down-regulated") %>%
+    arrange(p_value) %>%
+    head(20) %>%
+    select(term_name, source, term_size, intersection_size, p_value) %>%
+    mutate(p_value = formatC(p_value, format = "e", digits = 2))
+
+  kable(bar_down,
+        col.names = c("Término GO", "Base de datos", "Tamaño del término",
+                      "Genes en overlap", "p-value (FDR)"),
+        caption = "Tabla 6. Top 20 términos enriquecidos en genes down-regulated en Dp16 vs WT. Procesos reprimidos en el modelo de trisomía 16 respecto al ratón silvestre.") %>%
+    kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                  full_width = FALSE)
+}
+```
+
+**Interpretación:** Los procesos biológicos down-regulated revelan qué funciones normales del hígado están **reducidas** en el modelo Dp16. Comparar estos términos con los up-regulated permite entender si hay un intercambio funcional (trade-off): por ejemplo, si el metabolismo lipídico está activado pero la respuesta inmune está reprimida.
+
+### 8.6 Barplot GO:BP — Up-regulated
+
+```{r barplot-go-up, fig.cap="Figura 15. Top 20 procesos biológicos (GO:BP) enriquecidos en genes up-regulated en Dp16 vs WT. El eje X muestra la significancia en escala -log10(FDR): barras más largas = mayor enriquecimiento.", fig.width=10, fig.height=6}
+if (!is.null(multi_gp$result)) {
+  gost_df <- as.data.frame(multi_gp$result)
+
+  bar_up_plot <- gost_df %>%
+    filter(query == "Up-regulated", source == "GO:BP") %>%
+    arrange(p_value) %>%
+    head(20) %>%
+    mutate(log10p = round(-log10(p_value), 2),
+           num    = seq_len(n()))
+
+  if (nrow(bar_up_plot) > 0) {
+    ggplot(bar_up_plot,
+           aes(x = log10p, y = reorder(term_name, log10p))) +
+      geom_bar(stat = "identity", fill = "firebrick3", alpha = 0.8) +
+      geom_text(aes(label = log10p), hjust = -0.1, size = 3) +
+      labs(title = "GO:BP — Up-regulated (Dp16 vs WT)",
+           x = "-log10(FDR)", y = NULL) +
+      theme_classic(base_size = 12) +
+      theme(plot.background = element_rect(fill = "white"))
+  }
+}
+```
+
+**Interpretación:** Los procesos en la parte superior de la gráfica (barras más largas) son los más significativamente enriquecidos en los genes sobreexpresados en Dp16. Grupos de términos relacionados (por ejemplo, varios términos del metabolismo de ácidos grasos) sugieren que toda una vía biológica está activada, lo cual es biológicamente más convincente que un solo término aislado.
+
+### 8.7 Barplot GO:BP — Down-regulated
+
+```{r barplot-go-down, fig.cap="Figura 16. Top 20 procesos biológicos (GO:BP) enriquecidos en genes down-regulated en Dp16 vs WT. Procesos represados en el modelo de trisomía, ordenados por significancia.", fig.width=10, fig.height=6}
+if (!is.null(multi_gp$result)) {
+  gost_df <- as.data.frame(multi_gp$result)
+
+  bar_down_plot <- gost_df %>%
+    filter(query == "Down-regulated", source == "GO:BP") %>%
+    arrange(p_value) %>%
+    head(20) %>%
+    mutate(log10p = round(-log10(p_value), 2),
+           num    = seq_len(n()))
+
+  if (nrow(bar_down_plot) > 0) {
+    ggplot(bar_down_plot,
+           aes(x = log10p, y = reorder(term_name, log10p))) +
+      geom_bar(stat = "identity", fill = "dodgerblue3", alpha = 0.8) +
+      geom_text(aes(label = log10p), hjust = -0.1, size = 3) +
+      labs(title = "GO:BP — Down-regulated (Dp16 vs WT)",
+           x = "-log10(FDR)", y = NULL) +
+      theme_classic(base_size = 12) +
+      theme(plot.background = element_rect(fill = "white"))
+  }
+}
+```
+
+**Interpretación:** Los procesos GO:BP reprimidos en Dp16 indican qué funciones hepáticas normales están reducidas en el modelo de trisomía 16. La comparación entre las Figuras 15 y 16 permite construir una narrativa biológica completa: qué se activa, qué se reprime, y si hay una relación funcional entre ambos conjuntos de procesos.
+
+---
+
+## 9. Guardar resultados
+
+```{r guardar-resultados}
+if (!dir.exists(figdir)) dir.create(figdir, recursive = TRUE)
+
+# Resultados DEG completos (con shrinkage apeglm)
+write.csv(as.data.frame(res_kallisto_shrink),
+          file = paste0(outdir, "DESeq2_kallisto_results.csv"))
+write.csv(as.data.frame(res_star_shrink),
+          file = paste0(outdir, "DESeq2_STAR_results.csv"))
+
+# Solo genes significativos (padj < 0.05)
+write.csv(sig_kallisto,
+          file = paste0(outdir, "DESeq2_kallisto_significant.csv"))
+write.csv(sig_star,
+          file = paste0(outdir, "DESeq2_STAR_significant.csv"))
+
+# Resultados GO terms
+if (!is.null(multi_gp$result)) {
+  gost_export <- multi_gp$result
+  # Convertir columnas tipo lista a texto para exportar en CSV
+  gost_export$parents        <- sapply(gost_export$parents, paste, collapse = ";")
+  gost_export$evidence_codes <- sapply(gost_export$evidence_codes, paste, collapse = ";")
+  write.csv(gost_export,
+            file      = paste0(outdir, "GOterms_gprofiler2_results.csv"),
+            row.names = FALSE)
+}
+
+# Objetos R: dds, vsd, resultados, z-score, melted counts
+save(dds, dds_star,
+     vsd_kallisto, vsd_star,
+     res_kallisto_shrink, res_star_shrink,
+     zscore_mat, melted_norm_counts,
+     file = paste0(outdir, "DEG_objects.RData"))
+
+cat("Todos los archivos guardados en:", outdir, "\n")
+```
+
+---
+
+## 10. Conclusiones
+
+1. **Normalización exitosa:** La transformación VST produjo distribuciones de expresión comparables entre todas las muestras (Figura 1). El PCA separó claramente los genotipos WT y Dp16 (Figuras 2 y 4), confirmando que el genotipo es la principal fuente de variación en los datos y que no existe un batch effect evidente. El scree plot (Figura 3) indica qué fracción de la varianza total está capturada en los dos primeros componentes.
+
+2. **Expresión diferencial robusta:** Se identificaron genes significativos (padj < 0.05) con ambos alineadores. El shrinkage con `apeglm` estabilizó los log2FC de genes con baja expresión media, como se observa en los MA plots (Figuras 8 y 9): la contracción de puntos hacia log2FC = 0 en el extremo de baja expresión confirma que el shrinkage funcionó correctamente. Los heatmaps (Figuras 10 y 11) muestran patrones claros de sobreexpresión y subexpresión que separan ambos genotipos de forma no supervisada.
+
+3. **Alta concordancia Kallisto vs STAR:** El diagrama de Venn (Figura 12) y la correlación de log2FC (Figura 13) demuestran que la mayoría de los DEGs son compartidos entre ambos alineadores y que la magnitud del cambio es consistente. Esto valida que la firma transcriptómica del genotipo Dp16 es reproducible independientemente del método de cuantificación utilizado.
+
+4. **Procesos biológicos alterados:** El análisis funcional con gprofiler2 identificó términos GO, rutas KEGG y vías REAC enriquecidos en los genes up-regulated y down-regulated de Dp16 vs WT (Figuras 14–16, Tablas 5–6). Los procesos enriquecidos son consistentes con las alteraciones en el metabolismo hepático reportadas por Dunn et al. 2026, incluyendo genes como *Apoa4*, *Papss2* y *Ces1g*.
+
+---
+
+```{r session-info}
+sessionInfo()
+```
+
+---
+
+*Documento generado con R Markdown.*  
+*Análisis realizado en el cluster `ken.lavis.unam.mx`*  
+*Ruta del proyecto: `/Users/dubsirubs/Desktop/RNAseq_Equipo4/` y `/mnt/data/bioinfo-estadistica-2/RNAseq_2026/equipos/Equipo4/`*

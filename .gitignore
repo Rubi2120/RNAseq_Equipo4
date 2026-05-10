@@ -1,0 +1,7 @@
+.DS_Store
+**/.DS_Store
+*.gtf.gz
+*.RData
+.Rapp.history
+Rplots.pdf
+results_final/.Rapp.history

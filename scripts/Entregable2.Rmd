@@ -1,0 +1,135 @@
+---
+title: "Entregable 2"
+output: html_document
+---
+
+## Descripción del equipo
+
+-   **Equipo:** Equipo4
+-   **Integrantes:**
+    -   Leonardo Ivan Anaya Gonzalez (lanaya)
+    -   Rubií Martínez Chavarría (rmartinez)
+-   **Correos electrónicos:**
+rubimarch201@gmail.com
+[leoianayaglz\@gmail.com](mailto:leoianayaglz@gmail.com){.email}
+
+------------------------------------------------------------------------
+
+## Descripción de los datos
+
+**Tabla 1: Detalles del Bioproyecto y características de las muestras**
+
+| Descripción                   | Información                                                                                                      |
+|------------------------------------|------------------------------------|
+| Bioproject                    | PRJNA1259260                                                                                                     |
+| GEO Accession                 | GSE296420                                                                                                        |
+| Especie                       | *Mus musculus*                                                                                                   |
+| Tipo de bibliotecas           | Paired-end (PolyA RNA-seq)                                                                                       |
+| Método de selección           | PolyA (mRNA)                                                                                                     |
+| Número de transcriptomas      | 12                                                                                                               |
+| Número de réplicas biológicas | 6 réplicas por condición (WT y Dp16)                                                                             |
+| Secuenciador empleado         | Illumina NovaSeq 6000                                                                                            |
+| Profundidad de secuenciación  | 73 M – 80 M lecturas por muestra (muestras seleccionadas)                                                                                                                                     |
+| Tamaño de las lecturas        | 150 bp (paired-end)                                                                                              |
+| Tejido                        | Hígado de ratón adulto (19–26 semanas)                                                                           |
+| Artículo científico           | Dunn et al. 2026. *Altered hepatic metabolism in Down syndrome*. Cell Reports. DOI: 10.1016/j.celrep.2025.116835 |
+
+El artículo *"Altered hepatic metabolism in Down syndrome"* analiza las consecuencias metabólicas de la trisomía 21 en el hígado, usando un enfoque multi-ómico en más de 400 participantes humanos del **Human Trisome Project**, junto con el modelo murino Dp(16)1Yey (Dp16). Este modelo porta una duplicación del segmento del cromosoma 16 murino homólogo al cromosoma 21 humano. El estudio reporta niveles elevados de ácidos biliares, inflamación hepática, fibrosis y una reacción ductular en los ratones Dp16, cambios concordantes con los observados en personas con Síndrome de Down.
+
+Para fines de esta práctica, se seleccionaron las muestras de tejido hepático de ratones adultos wild-type (WT) y Dp16, correspondientes al dataset GSE296420, las cuales se presentan en la Tabla 2.
+
+**Tabla 2: Distribución de las muestras y réplicas biológicas**
+
+```{r tabla-muestras, echo=FALSE, message=FALSE}
+library(knitr)
+library(kableExtra)
+
+muestras <- data.frame(
+  Muestra       = c("Sample_WT_173_13422_Lv",  "Sample_WT_179_13423_Lv",
+                    "Sample_WT_184_13425_Lv",  "Sample_WT_186_13426_Lv",
+                    "Sample_WT_191_13428_Lv",  "Sample_WT_196_13429_Lv",
+                    "Sample_Dp16_173_13422_Lv","Sample_Dp16_179_13423_Lv",
+                    "Sample_Dp16_184_13425_Lv","Sample_Dp16_186_13426_Lv",
+                    "Sample_Dp16_191_13428_Lv","Sample_Dp16_196_13429_Lv"),
+  GEO_Sample    = c("GSM8970167","GSM8970168","GSM8970169",
+                    "GSM8970170","GSM8970171","GSM8970172",
+                    "GSM8970173","GSM8970174","GSM8970175",
+                    "GSM8970176","GSM8970177","GSM8970178"),
+  Condicion     = c(rep("WT", 6), rep("Dp16", 6)),
+  Genotipo      = c(rep("Wild-type C57BL/6J", 6), rep("Dp(16)1Yey", 6)),
+  Tejido        = rep("Hígado", 12),
+  Replica       = c(paste0("WT_", 1:6), paste0("Dp16_", 1:6))
+)
+
+kable(muestras, caption = "Tabla 2. Distribución de las muestras y réplicas biológicas") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+Los datos se pueden descargar usando el SRA Run Selector de NCBI o mediante la herramienta `fasterq-dump` del kit SRA Tools.
+
+------------------------------------------------------------------------
+
+## Calidad de las secuencias de los datos crudos
+
+
+Se analizó la calidad de las secuencias en los datos crudos mediante **FastQC** y la visualización conjunta con **MultiQC**, evaluando métricas como contenido de GC, profundidad de lectura, puntaje Phred y presencia de adaptadores.
+
+### Calidad general de las lecturas
+
+Las muestras presentan una calidad óptima, con valores dentro de la zona verde y un puntaje Phred superior a 30 en la mayoría de las posiciones. El promedio de calidad por base muestra un pico máximo cercano a Phred 35.
+
+```{r fig-calidad, echo=FALSE, fig.cap="Figura 1. Calidad de las secuencias y por posición de base en las muestras WT y Dp16.", out.width="80%"}
+knitr::include_graphics("C:/Users/leoia/Downloads/multiqc_plots/fastqc_per_base_sequence_quality_plot.png")
+knitr::include_graphics("C:/Users/leoia/Downloads/multiqc_plots/fastqc_per_sequence_quality_scores_plot.png")
+```
+
+### Contenido de GC
+
+Se identificaron variaciones en el porcentaje de %GC en algunas muestras, lo cual podría estar relacionado con contaminación o sesgo de amplificación.
+
+```{r fig-gc, echo=FALSE, fig.cap="Figura 2. Distribución del contenido de GC en las muestras.", out.width="80%"}
+knitr::include_graphics("C:/Users/leoia/Downloads/multiqc_plots/fastqc_per_sequence_gc_content_plot.png")
+```
+
+### Secuencias duplicadas
+
+Se identificaron secuencias duplicadas en algunas muestras, posiblemente relacionadas con la presencia de dímeros de adaptadores o alta profundidad de secuenciación.
+
+```{r fig-dup, echo=FALSE, fig.cap="Figura 3. Calidad de las secuencias y niveles de duplicación.", out.width="90%"}
+knitr::include_graphics("C:/Users/leoia/Downloads/multiqc_plots/fastqc_sequence_duplication_levels_plot.png")
+```
+
+Asi mismo se identificaron tambien los adaptadores
+
+```{r fig-dup2, echo=FALSE, fig.cap="Figura 4. Adaptadores.", out.width="90%"}
+knitr::include_graphics("C:/Users/leoia/Downloads/multiqc_plots/fastqc_adapter_content_plot.png")
+```
+
+------------------------------------------------------------------------
+## Selección de muestras para el análisis
+
+Con base en los resultados del análisis de calidad, se seleccionaron 6 muestras para el análisis diferencial: 3 controles (wild-type) y 3 tratamientos (Dp16). Para la selección se priorizaron muestras con mayor profundidad de secuenciación y menor porcentaje de duplicación, con el fin de minimizar sesgos en etapas posteriores del análisis.
+
+Se excluyó la muestra SRR33445251 debido a su baja profundidad de secuenciación (~22.5 M lecturas). Las muestras seleccionadas presentan una duplicación homogénea entre grupos (~74–80%), lo cual garantiza comparabilidad entre condiciones y un desempeño adecuado en herramientas de expresión diferencial como DESeq2 o edgeR.
+
+**Tabla 3. Muestras seleccionadas para el análisis**
+
+```{r tabla-seleccion, echo=FALSE, message=FALSE}
+library(knitr)
+library(kableExtra)
+
+seleccion <- data.frame(
+  SRR          = c("SRR33445253","SRR33445254","SRR33445256",
+                   "SRR33445260","SRR33445261","SRR33445262"),
+  Condicion    = c(rep("Control (WT)", 3), rep("Tratamiento (Dp16)", 3)),
+  Duplicacion  = c("~79.6%","~79.7%","~75.6%","~74–77%","~74–77%","~73–76%"),
+  Replica      = c("WT_1","WT_2","WT_3","Dp16_1","Dp16_2","Dp16_3")
+)
+
+kable(seleccion, caption = "Tabla 3. Muestras seleccionadas para el análisis diferencial.") %>%
+  kable_styling(bootstrap_options = c("striped","hover","condensed"), full_width = FALSE)
+```
+
+## Conclusión
+
+Los resultados del análisis de calidad muestran que los datos son adecuados para continuar con el procesamiento y análisis posterior. Las secuencias presentan una buena calidad general, con valores de Phred superiores a 30 y un contenido de GC apropiado para tejido hepático murino (\~50%). Aunque se observan algunas variaciones en el %GC y presencia de secuencias duplicadas, estas serán abordadas en la etapa de limpieza. Se procederá a eliminar adaptadores y secuencias de baja calidad con **Trimmomatic** o **Trim Galore** antes de continuar con el alineamiento y cuantificación de expresión génica.

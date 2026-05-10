@@ -7,7 +7,7 @@
 ## Integrantes
 
 - Leonardo Ivan Anaya Gonzalez (lanaya) — leoianayaglz@gmail.com  
-- Rubii Martinez Chavarria (rmartinez) — rubimarch201@gmail.com  
+- Rubi Martinez Chavarria (rmartinez) — rubimarch201@gmail.com  
 
 ---
 

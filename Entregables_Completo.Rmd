@@ -58,9 +58,10 @@ kable(seleccion, caption = "Tabla 3. Muestras seleccionadas para el análisis di
   kable_styling(bootstrap_options = c("striped","hover","condensed"), full_width = FALSE)
 ```
 
-## Conclusión
+## Interpretación
 
-Los resultados del análisis de calidad muestran que los datos son adecuados para continuar con el procesamiento y análisis posterior. Las secuencias presentan una buena calidad general, con valores de Phred superiores a 30 y un contenido de GC apropiado para tejido hepático murino (\~50%). Aunque se observan algunas variaciones en el %GC y presencia de secuencias duplicadas, estas serán abordadas en la etapa de limpieza. Se procederá a eliminar adaptadores y secuencias de baja calidad con **Trimmomatic** o **Trim Galore** antes de continuar con el alineamiento y cuantificación de expresión génica.
+Los resultados del análisis de calidad muestran que los datos son adecuados para continuar con el procesamiento y análisis posterior. Las secuencias presentan una buena calidad general, con valores de Phred superiores a 30 y un contenido de GC apropiado para tejido hepático murino (~50%). Aunque se observan algunas variaciones en el %GC y presencia de secuencias duplicadas, estas serán abordadas en la etapa de limpieza. Se procederá a eliminar adaptadores y secuencias de baja calidad con Trimmomatic antes de continuar con el alineamiento y cuantificación de expresión génica.
+Las muestras seleccionadas para el análisis fueron: SRR33445252, SRR33445253, SRR33445254, SRR33445260, SRR33445261 y SRR33445262.
 
 ---
 

@@ -23,7 +23,7 @@ Se realizó un análisis de RNA-seq de tejido hepático de ratón adulto compara
 
 ## 🔗 Reporte renderizado
 
-- 📄 **[Ver reporte final completo (Entregables 2, 3 y 4)](https://Rubi2120.github.io/RNAseq_Equipo4/Entregables_Completo_final.html)**
+- 📄 **[Ver reporte final completo (Entregables 2, 3 y 4)](https://Rubi2120.github.io/RNAseq_Equipo4/Entregables_Completo_final-2.html)**
 - 📄 [Ver reporte Entregable 4 — DEG + Análisis Funcional GO](https://Rubi2120.github.io/RNAseq_Equipo4/entregable4_fin.html)
 - 📄 [Ver reporte Entregable 3 — FastQC, Trimmomatic, STAR, Kallisto](https://Rubi2120.github.io/RNAseq_Equipo4/Entregable3_corregido_final.html)
 

@@ -40,7 +40,6 @@ Con base en los resultados del análisis de calidad, se seleccionaron 6 muestras
 
 Se excluyó la muestra SRR33445251 debido a su baja profundidad de secuenciación (~22.5 M lecturas). Las muestras seleccionadas presentan una duplicación homogénea entre grupos (~74–80%), lo cual garantiza comparabilidad entre condiciones y un desempeño adecuado en herramientas de expresión diferencial como DESeq2 o edgeR.
 
-**Tabla 3. Muestras seleccionadas para el análisis**
 
 ```{r e2-tabla-seleccion, echo=FALSE, message=FALSE}
 library(knitr)

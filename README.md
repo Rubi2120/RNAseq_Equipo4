@@ -2,7 +2,7 @@
 
 **Materia:** Bioinformática y Estadística II  
 **Semestre:** Mayo 2026  
-**Equipo:** 4
+**Equipo:**. 4
 
 ---
 
